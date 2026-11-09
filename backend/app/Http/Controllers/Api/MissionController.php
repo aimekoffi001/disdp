@@ -52,6 +52,22 @@ class MissionController extends Controller
         if (empty($validated['statut'])) {
             $validated['statut'] = 'planifiee';
         }
+        if (empty($validated['utilisateur_id'])) {
+            $validated['utilisateur_id'] = auth()->id() ?? \App\Models\Utilisateur::first()?->id ?? 1;
+        }
+        if (empty($validated['date_debut_prevue'])) {
+            $validated['date_debut_prevue'] = now();
+        }
+        if (empty($validated['date_fin_prevue'])) {
+            $duration = (int) ($request->input('durationMin', 60));
+            $validated['date_fin_prevue'] = now()->addMinutes($duration);
+        }
+        if (empty($validated['altitude_vol_m'])) {
+            $validated['altitude_vol_m'] = 45.00;
+        }
+        if (empty($validated['vitesse_croisiere_ms'])) {
+            $validated['vitesse_croisiere_ms'] = 8.00;
+        }
 
         $droneId = $validated['drone_id'] ?? null;
         unset($validated['drone_id']);
@@ -98,12 +114,22 @@ class MissionController extends Controller
         $droneId = $validated['drone_id'] ?? null;
         unset($validated['drone_id']);
 
+        if ($request->filled('durationMin')) {
+            $duration = (int) $request->input('durationMin', 60);
+            $start = $mission->date_debut_prevue ? \Carbon\Carbon::parse($mission->date_debut_prevue) : now();
+            $validated['date_fin_prevue'] = $start->copy()->addMinutes($duration);
+        }
+
         $mission->update($validated);
 
-        if ($droneId) {
-            $mission->drones()->sync([
-                $droneId => ['role_drone' => 'principal', 'statut' => 'assigne'],
-            ]);
+        if ($request->has('drone_id')) {
+            if ($droneId) {
+                $mission->drones()->sync([
+                    $droneId => ['role_drone' => 'principal', 'statut' => 'assigne'],
+                ]);
+            } else {
+                $mission->drones()->detach();
+            }
         }
 
         return response()->json([

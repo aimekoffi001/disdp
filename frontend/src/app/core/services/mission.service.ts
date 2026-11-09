@@ -79,6 +79,7 @@ export class MissionService {
     if (!m || !d) return { ok: false, error: 'Mission ou drone introuvable.' };
     this._missions.update((l) => l.map((x) => (x.id === id ? { ...x, status: 'in-progress' as const, droneId } : x)));
     this.drones.setMission(droneId, id);
+    this.backend.updateMission(id, { droneId, status: 'in-progress' }).catch(() => {});
     return { ok: true };
   }
 
@@ -87,6 +88,7 @@ export class MissionService {
     if (!m) return;
     if (m.droneId) this.drones.setMission(m.droneId, undefined);
     this._missions.update((l) => l.map((x) => (x.id === id ? { ...x, status: 'completed' as const, droneId: undefined } : x)));
+    this.backend.updateMission(id, { status: 'completed' }).catch(() => {});
   }
 
   cancel(id: string): void {
@@ -94,6 +96,7 @@ export class MissionService {
     if (!m) return;
     if (m.droneId) this.drones.setMission(m.droneId, undefined);
     this._missions.update((l) => l.map((x) => (x.id === id ? { ...x, status: 'cancelled' as const, droneId: undefined } : x)));
+    this.backend.updateMission(id, { status: 'cancelled' }).catch(() => {});
   }
 
   interruptForDrone(droneId: string): void {

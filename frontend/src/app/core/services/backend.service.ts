@@ -252,6 +252,7 @@ export class BackendService {
         description: input.description,
         statut: 'planifiee',
         type_mission: 'surveillance',
+        durationMin: Number(input.durationMin) || 60,
       };
       if (input.droneId) payload['drone_id'] = Number(input.droneId);
 
@@ -273,12 +274,26 @@ export class BackendService {
     }
   }
 
-  async updateMission(id: string, input: Partial<MissionInput>): Promise<OpResult> {
+  async updateMission(id: string, input: Partial<MissionInput> & { status?: MissionStatus }): Promise<OpResult> {
     try {
       const payload: Record<string, any> = {};
       if (input.name !== undefined) payload['nom'] = input.name;
       if (input.description !== undefined) payload['description'] = input.description;
-      if (input.droneId !== undefined) payload['drone_id'] = Number(input.droneId);
+      if (input.droneId !== undefined) {
+        payload['drone_id'] = input.droneId ? Number(input.droneId) : null;
+      }
+      if (input.durationMin !== undefined) {
+        payload['durationMin'] = Number(input.durationMin) || 60;
+      }
+      if (input.status !== undefined) {
+        const reverseStatus: Record<MissionStatus, string> = {
+          'planned': 'planifiee',
+          'in-progress': 'en_cours',
+          'completed': 'terminee',
+          'cancelled': 'annulee',
+        };
+        payload['statut'] = reverseStatus[input.status] || input.status;
+      }
 
       const res = await fetch(`${this.baseUrl}/api/missions/${id}`, {
         method: 'PUT',
@@ -538,11 +553,17 @@ export class BackendService {
 
     return backendMissions.map((m) => {
       const assignedDrone = m.drones?.[0];
+      let durationMin = m.duree_estimee_minutes || 60;
+      if (m.date_debut_prevue && m.date_fin_prevue) {
+        const diffMs = new Date(m.date_fin_prevue).getTime() - new Date(m.date_debut_prevue).getTime();
+        const diffMins = Math.round(diffMs / 60000);
+        if (diffMins > 0) durationMin = diffMins;
+      }
       return {
         id: String(m.id),
         name: m.nom,
         description: m.description || '',
-        durationMin: m.duree_estimee_minutes || 60,
+        durationMin,
         status: statusMap[m.statut] || 'planned',
         droneId: assignedDrone ? String(assignedDrone.id) : undefined,
       };

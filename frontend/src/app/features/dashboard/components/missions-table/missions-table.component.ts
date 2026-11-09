@@ -18,7 +18,7 @@ import { MISSION_STATUS, fmtDuration } from '../../../../shared/utils/labels';
       <div class="panel-title flex items-center justify-between">
         <div class="flex items-center gap-2">
           <app-icon name="missions" [size]="15" class="text-[#38BDF8]" />
-          <span class="text-[#F8FAFC] font-semibold">{{ full() ? 'Missions' : 'Missions en cours' }}</span>
+          <span class="text-[#F8FAFC] font-semibold">{{ full() ? 'Missions' : 'Missions actives & récentes' }}</span>
         </div>
         <div class="flex items-center gap-2">
           @if (full()) { <button type="button" class="btn-pill" (click)="ui.openMissionForm()">+ Créer une mission</button> }
@@ -94,7 +94,7 @@ export class MissionsTableComponent {
     const list = this.missions.missions();
     const st = this.status();
     const filtered = st ? list.filter((m) => m.status === st) : list;
-    return this.full() ? filtered : filtered.filter((m) => m.status === 'in-progress');
+    return this.full() ? filtered : filtered.filter((m) => m.status === 'in-progress' || m.status === 'planned');
   });
 
   protected remove(m: Mission): void {
