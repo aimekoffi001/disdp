@@ -47,8 +47,8 @@ services:
   # 4. Frontend Angular (Build multi-stage & Nginx)
   frontend:
     build:
-      context: .
-      dockerfile: ./docker/frontend/Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: disdp_frontend
     restart: unless-stopped
     ports:
