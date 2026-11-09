@@ -1,0 +1,12 @@
+**/.git
+**/node_modules
+**/.angular
+**/vendor
+**/dist
+**/.vscode
+**/.idea
+backend/storage/logs/*.log
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+

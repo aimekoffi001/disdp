@@ -1,0 +1,410 @@
+// ==============================================================================
+// DISDP - Drone Intelligent de Détection des Pannes et de Surveillance des Champs
+// FabLab de l'Université Virtuelle de Côte d'Ivoire (UVCI)
+// Schéma relationnel DBML version 2 (19 tables)
+// Conforme au dictionnaire de données docs/dictionnaire_donnees_v2.md
+// Compatible avec l'import direct sur https://dbdiagram.io
+// ==============================================================================
+
+Project DISDP {
+  database_type: 'MySQL'
+  Note: '''
+    # DISDP - Base de données (19 tables)
+    Système de drones agricoles pour la surveillance des champs et l'effarouchement sonore des animaux ravageurs.
+    Module ESP32 embarqué, transmission de télémétrie temps réel et métrologie des capteurs.
+  '''
+}
+
+// ------------------------------------------------------------------------------
+// GROUPE A — UTILISATEURS ET ÉQUIPEMENTS
+// ------------------------------------------------------------------------------
+
+Table users {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  nom varchar(100) [not null, note: 'Nom de famille']
+  prenom varchar(100) [note: 'Prénom']
+  email varchar(191) [unique, not null, note: 'Identifiant de connexion']
+  password varchar(255) [not null, note: 'Mot de passe haché']
+  role varchar(30) [not null, default: 'operateur', note: 'Enum RoleUser: administrateur, operateur, technicien, observateur']
+  actif boolean [not null, default: true, note: 'Compte activé']
+  derniere_connexion_at datetime [note: 'Horodatage dernière connexion']
+  remember_token varchar(100)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table drones {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  nom varchar(100) [not null, note: 'Nom d\'usage']
+  code_drone varchar(50) [unique, not null, note: 'Code unique (ex. DRN-001)']
+  modele varchar(100) [note: 'Modèle constructeur']
+  numero_serie varchar(100) [unique, note: 'Numéro de série']
+  statut varchar(30) [not null, default: 'disponible', note: 'Enum StatutDrone: disponible, en_vol, en_maintenance, hors_ligne']
+  niveau_batterie decimal(5,2) [note: 'Cache dernier relevé (%) [0-100]']
+  portee_max_km decimal(6,2) [not null, note: 'Portée nominale en km']
+  latitude_actuelle decimal(10,7) [note: 'Cache dernière latitude']
+  longitude_actuelle decimal(10,7) [note: 'Cache dernière longitude']
+  derniere_communication_at datetime [note: 'Dernier signal reçu']
+  date_mise_en_service date [note: 'Date de mise en service']
+  deleted_at timestamp [note: 'Suppression logique SoftDeletes']
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    statut
+  }
+}
+
+Table modules_esp32 {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  drone_id bigint [not null, note: 'Drone porteur']
+  nom varchar(100) [not null, note: 'Nom du module']
+  adresse_mac varchar(17) [unique, not null, note: 'Adresse MAC physique']
+  version_firmware varchar(30) [note: 'Version firmware']
+  statut varchar(30) [not null, note: 'Enum StatutModuleEsp32: en_ligne, hors_ligne, erreur']
+  jeton_api_hash varchar(255) [note: 'Hash du jeton d\'API']
+  derniere_communication_at datetime [note: 'Dernier message reçu']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table capteurs {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  drone_id bigint [not null, note: 'Drone équipé']
+  module_esp32_id bigint [note: 'Module ESP32 lisant ce capteur']
+  nom varchar(100) [not null, note: 'Nom du capteur (unique par drone)']
+  type_capteur varchar(50) [not null, note: 'Enum TypeCapteur: gps, temperature, humidite, pression, tension, courant, autre']
+  unite_mesure varchar(20) [note: '°C, %, hPa, V, A...']
+  plage_min decimal(12,4) [note: 'Valeur minimale']
+  plage_max decimal(12,4) [note: 'Valeur maximale']
+  statut varchar(30) [not null, note: 'Enum StatutCapteur: actif, defectueux, desactive']
+  date_installation date [note: 'Installation physique']
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (drone_id, nom) [unique]
+  }
+}
+
+Table cameras {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  drone_id bigint [not null, note: 'Drone porteur']
+  nom varchar(100) [not null, note: 'Nom de la caméra (unique par drone)']
+  type_camera varchar(50) [not null, note: 'Enum TypeCamera: rgb, thermique, infrarouge']
+  resolution varchar(30) [note: 'Résolution (ex. 1920x1080)']
+  statut varchar(30) [not null, note: 'Enum StatutCamera: active, inactive, defectueuse']
+  adresse_flux_video varchar(500) [note: 'URL flux chiffrée (cast encrypted)']
+  date_ajout datetime [note: 'Date d\'ajout au drone']
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (drone_id, nom) [unique]
+  }
+}
+
+// ------------------------------------------------------------------------------
+// GROUPE B — TERRAIN ET MISSIONS
+// ------------------------------------------------------------------------------
+
+Table zones_surveillance {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  nom_zone varchar(150) [not null, note: 'Nom du champ']
+  description text [note: 'Description du terrain']
+  type_culture varchar(100) [note: 'Culture agricole']
+  latitude_centre decimal(10,7) [not null, note: 'Centre de la parcelle (lat)']
+  longitude_centre decimal(10,7) [not null, note: 'Centre de la parcelle (lng)']
+  surface_hectares decimal(10,2) [note: 'Superficie en hectares']
+  limites_gps json [note: 'Périmètre polygonal GeoJSON']
+  responsable_id bigint [note: 'Responsable du champ']
+  deleted_at timestamp [note: 'Suppression logique SoftDeletes']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table missions {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  drone_id bigint [not null, note: 'Drone affecté']
+  zone_id bigint [not null, note: 'Zone surveillée']
+  cree_par_id bigint [note: 'Opérateur créateur']
+  nom_mission varchar(150) [not null, note: 'Nom de la mission']
+  type_mission varchar(30) [not null, note: 'Enum TypeMission: surveillance, dissuasion, test']
+  description text [note: 'Objectifs']
+  date_debut_prevue datetime [not null, note: 'Départ programmé']
+  date_fin_prevue datetime [note: 'Fin programmée']
+  date_debut_reelle datetime [note: 'Décollage effectif']
+  date_fin_reelle datetime [note: 'Atterrissage effectif']
+  altitude_prevue decimal(7,2) [note: 'Altitude cible en mètres']
+  vitesse_prevue decimal(6,2) [note: 'Vitesse cible en m/s']
+  statut varchar(30) [not null, default: 'planifiee', note: 'Enum StatutMission: planifiee, en_cours, terminee, annulee, echouee']
+  motif_arret text [note: 'Raison d\'annulation ou échec']
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    date_debut_prevue
+    (drone_id, statut)
+  }
+}
+
+Table points_vol {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  mission_id bigint [not null, note: 'Mission parente']
+  ordre int [not null, note: 'Ordre séquentiel (1, 2, 3...)']
+  latitude decimal(10,7) [not null, note: 'Latitude cible']
+  longitude decimal(10,7) [not null, note: 'Longitude cible']
+  altitude decimal(7,2) [note: 'Altitude cible (mètres)']
+  vitesse_prevue decimal(6,2) [note: 'Vitesse cible (m/s)']
+  action varchar(30) [not null, default: 'passage', note: 'Enum ActionPointVol: passage, survol, emission_sonore, photo']
+  duree_stationnaire_s smallint [note: 'Temps d\'attente sur place en s']
+  statut varchar(30) [not null, default: 'a_atteindre', note: 'Enum StatutPointVol: a_atteindre, atteint, ignore']
+  atteint_at datetime [note: 'Horodatage d\'arrivée']
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (mission_id, ordre) [unique]
+  }
+}
+
+// ------------------------------------------------------------------------------
+// GROUPE C — DONNÉES DE VOL ET MÉTROLOGIE
+// ------------------------------------------------------------------------------
+
+Table telemetries {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  drone_id bigint [not null, note: 'Drone émetteur']
+  mission_id bigint [note: 'Mission associée']
+  latitude decimal(10,7) [note: 'Position GPS lat']
+  longitude decimal(10,7) [note: 'Position GPS lng']
+  altitude decimal(7,2) [note: 'Altitude réelle (m)']
+  vitesse decimal(6,2) [note: 'Vitesse réelle (m/s)']
+  niveau_batterie decimal(5,2) [note: 'Niveau batterie (%) [0-100]']
+  tension_batterie_v decimal(5,2) [note: 'Tension (Volts)']
+  temperature decimal(5,2) [note: 'Température (°C)']
+  cap_de_vol decimal(6,2) [note: 'Cap en degrés [0-360]']
+  nb_satellites tinyint [note: 'Satellites GPS']
+  force_signal_dbm smallint [note: 'Signal radio (dBm)']
+  date_mesure datetime(3) [not null, note: 'Horodatage précis à la milliseconde']
+  created_at timestamp [note: 'Réception serveur (pas de updated_at)']
+
+  indexes {
+    (drone_id, date_mesure)
+    (mission_id, date_mesure)
+  }
+}
+
+Table mesures_capteurs {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  capteur_id bigint [not null, note: 'Capteur source']
+  mission_id bigint [note: 'Mission en cours']
+  valeur double [not null, note: 'Valeur numérique relevée']
+  qualite_mesure varchar(30) [note: 'Enum QualiteMesure: valide, douteuse, invalide']
+  date_mesure datetime(3) [not null, note: 'Horodatage précis à la milliseconde']
+  created_at timestamp [note: 'Insertion en base (pas de updated_at)']
+
+  indexes {
+    (capteur_id, date_mesure)
+  }
+}
+
+Table sessions_video {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  camera_id bigint [not null, note: 'Caméra source']
+  mission_id bigint [note: 'Mission associée']
+  date_debut datetime [not null, note: 'Début capture']
+  date_fin datetime [note: 'Fin capture']
+  type_session varchar(30) [not null, note: 'Enum TypeSessionVideo: direct, enregistrement']
+  url_enregistrement varchar(500) [note: 'Lien vidéo ou flux']
+  statut varchar(30) [not null, note: 'Enum StatutSessionVideo: active, terminee, interrompue']
+  created_at timestamp
+  updated_at timestamp
+}
+
+// ------------------------------------------------------------------------------
+// GROUPE D — DISSUASION DES ANIMAUX
+// ------------------------------------------------------------------------------
+
+Table especes_animales {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  nom_commun varchar(100) [unique, not null, note: 'Nom vernaculaire']
+  nom_scientifique varchar(150) [note: 'Nom binomial latin']
+  categorie varchar(30) [not null, note: 'Enum CategorieEspece: oiseau, rongeur, mammifere, primate, autre']
+  niveau_nuisance varchar(20) [not null, note: 'Enum NiveauNuisance: faible, moyen, eleve']
+  description text [note: 'Description des dégâts agricoles']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table sons {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  nom varchar(100) [not null, note: 'Nom du fichier sonore']
+  categorie varchar(50) [not null, note: 'Enum CategorieSon: cri_predateur, ultrason, bruit_fort, sirene, autre']
+  chemin_fichier varchar(255) [not null, note: 'Chemin du fichier audio']
+  format_audio varchar(10) [not null, note: 'wav, mp3']
+  duree_secondes decimal(6,2) [note: 'Durée en secondes']
+  frequence_min_hz int [note: 'Bande basse (Hz)']
+  frequence_max_hz int [note: 'Bande haute (Hz)']
+  volume_recommande_pct tinyint [note: 'Volume suggéré [0-100]']
+  actif boolean [not null, default: true, note: 'Son utilisable']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table son_espece {
+  son_id bigint [not null, note: 'Son répulsif']
+  espece_id bigint [not null, note: 'Espèce cible']
+
+  indexes {
+    (son_id, espece_id) [pk]
+  }
+}
+
+Table detections {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  mission_id bigint [not null, note: 'Mission en cours']
+  camera_id bigint [note: 'Caméra source']
+  espece_id bigint [note: 'Espèce identifiée']
+  source varchar(30) [not null, note: 'Enum SourceDetection: camera, capteur, manuelle']
+  nombre_estime smallint [note: 'Estimation du nombre d\'individus']
+  confiance decimal(5,2) [note: 'Confiance IA (%) [0-100]']
+  latitude decimal(10,7) [note: 'Latitude de détection']
+  longitude decimal(10,7) [note: 'Longitude de détection']
+  image_path varchar(500) [note: 'Chemin de la capture d\'écran']
+  statut varchar(30) [not null, default: 'nouvelle', note: 'Enum StatutDetection: nouvelle, confirmee, fausse_alerte']
+  valide_par_id bigint [note: 'Opérateur validateur']
+  date_detection datetime(3) [not null, note: 'Horodatage détection']
+  created_at timestamp [note: 'Insertion (pas de updated_at)']
+
+  indexes {
+    date_detection
+  }
+}
+
+Table emissions_sonores {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  mission_id bigint [not null, note: 'Mission en cours']
+  son_id bigint [not null, note: 'Son diffusé']
+  detection_id bigint [note: 'Détection déclencheuse']
+  commande_par_id bigint [note: 'Opérateur manuel']
+  declenchement varchar(20) [not null, note: 'Enum DeclenchementEmission: automatique, manuel, programme']
+  volume_pct tinyint [not null, note: 'Volume utilisé (%) [0-100]']
+  date_debut datetime(3) [not null, note: 'Horodatage début']
+  duree_secondes decimal(6,2) [note: 'Durée effective (s)']
+  latitude decimal(10,7) [note: 'Position lat']
+  longitude decimal(10,7) [note: 'Position lng']
+  resultat varchar(30) [note: 'Enum ResultatEmission: animaux_partis, sans_effet, indetermine']
+  created_at timestamp [note: 'Insertion (pas de updated_at)']
+
+  indexes {
+    date_debut
+  }
+}
+
+// ------------------------------------------------------------------------------
+// GROUPE E — SUPERVISION ET MAINTENANCE
+// ------------------------------------------------------------------------------
+
+Table alertes {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  drone_id bigint [note: 'Drone concerné']
+  mission_id bigint [note: 'Mission concernée']
+  detection_id bigint [note: 'Détection liée']
+  type_alerte varchar(40) [not null, note: 'Enum TypeAlerte: batterie_faible, perte_signal, hors_zone, detection_animal, panne_capteur, temperature_elevee']
+  gravite varchar(20) [not null, note: 'Enum GraviteAlerte: info, avertissement, critique']
+  message varchar(255) [not null, note: 'Message d\'alerte']
+  valeur_mesuree decimal(12,4) [note: 'Valeur mesurée']
+  seuil decimal(12,4) [note: 'Seuil dépassé']
+  statut varchar(20) [not null, default: 'nouvelle', note: 'Enum StatutAlerte: nouvelle, acquittee, resolue']
+  acquittee_par_id bigint [note: 'Utilisateur qui acquitte']
+  acquittee_at datetime [note: 'Date d\'acquittement']
+  created_at timestamp [note: 'Déclenchement (pas de updated_at)']
+
+  indexes {
+    statut
+  }
+}
+
+Table incidents {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  drone_id bigint [not null, note: 'Drone sujet de l\'avarie']
+  mission_id bigint [note: 'Mission pendant laquelle l\'incident est survenu']
+  composant varchar(50) [not null, note: 'Enum ComposantIncident: moteur, batterie, helice, capteur, camera, module_esp32, haut_parleur, autre']
+  titre varchar(150) [not null, note: 'Résumé de l\'anomalie']
+  description text [note: 'Détail technique']
+  gravite varchar(20) [not null, note: 'Enum GraviteIncident: mineure, majeure, critique']
+  statut varchar(20) [not null, default: 'ouvert', note: 'Enum StatutIncident: ouvert, en_analyse, resolu, clos']
+  cause text [note: 'Diagnostic']
+  solution text [note: 'Action corrective']
+  signale_par_id bigint [note: 'Opérateur déclarant']
+  date_incident datetime [not null, note: 'Date de survenue']
+  date_resolution datetime [note: 'Date de clôture']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table inspections {
+  id bigint [pk, increment, note: 'Identifiant unique']
+  drone_id bigint [not null, note: 'Drone inspecté']
+  technicien_id bigint [not null, note: 'Technicien certificateur']
+  type_inspection varchar(30) [not null, note: 'Enum TypeInspection: controle_initial, preventive, corrective']
+  date_inspection datetime [not null, note: 'Date de visite']
+  resultat varchar(20) [not null, note: 'Enum ResultatInspection: conforme, reserves, non_conforme']
+  observations text [note: 'Remarques techniques']
+  prochaine_inspection date [note: 'Échéance suivante']
+  created_at timestamp
+  updated_at timestamp
+}
+
+// ------------------------------------------------------------------------------
+// RELATIONS ET RÈGLES DE SUPPRESSION (ON DELETE)
+// ------------------------------------------------------------------------------
+
+Ref: modules_esp32.drone_id > drones.id [delete: cascade]
+Ref: capteurs.drone_id > drones.id [delete: cascade]
+Ref: capteurs.module_esp32_id > modules_esp32.id [delete: set null]
+Ref: cameras.drone_id > drones.id [delete: cascade]
+
+Ref: zones_surveillance.responsable_id > users.id [delete: set null]
+
+Ref: missions.drone_id > drones.id [delete: restrict]
+Ref: missions.zone_id > zones_surveillance.id [delete: restrict]
+Ref: missions.cree_par_id > users.id [delete: set null]
+
+Ref: points_vol.mission_id > missions.id [delete: cascade]
+
+Ref: telemetries.drone_id > drones.id [delete: restrict]
+Ref: telemetries.mission_id > missions.id [delete: set null]
+
+Ref: mesures_capteurs.capteur_id > capteurs.id [delete: cascade]
+Ref: mesures_capteurs.mission_id > missions.id [delete: set null]
+
+Ref: sessions_video.camera_id > cameras.id [delete: cascade]
+Ref: sessions_video.mission_id > missions.id [delete: set null]
+
+Ref: son_espece.son_id > sons.id [delete: cascade]
+Ref: son_espece.espece_id > especes_animales.id [delete: cascade]
+
+Ref: detections.mission_id > missions.id [delete: restrict]
+Ref: detections.camera_id > cameras.id [delete: set null]
+Ref: detections.espece_id > especes_animales.id [delete: set null]
+Ref: detections.valide_par_id > users.id [delete: set null]
+
+Ref: emissions_sonores.mission_id > missions.id [delete: restrict]
+Ref: emissions_sonores.son_id > sons.id [delete: restrict]
+Ref: emissions_sonores.detection_id > detections.id [delete: set null]
+Ref: emissions_sonores.commande_par_id > users.id [delete: set null]
+
+Ref: alertes.drone_id > drones.id [delete: set null]
+Ref: alertes.mission_id > missions.id [delete: set null]
+Ref: alertes.detection_id > detections.id [delete: set null]
+Ref: alertes.acquittee_par_id > users.id [delete: set null]
+
+Ref: incidents.drone_id > drones.id [delete: restrict]
+Ref: incidents.mission_id > missions.id [delete: set null]
+Ref: incidents.signale_par_id > users.id [delete: set null]
+
+Ref: inspections.drone_id > drones.id [delete: restrict]
+Ref: inspections.technicien_id > users.id [delete: restrict]
+

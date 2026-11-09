@@ -1,0 +1,72 @@
+services:
+  # 1. Base de données MySQL 8.4
+  db:
+    image: mysql:8.4
+    container_name: disdp_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: fablab_drones
+      MYSQL_USER: disdp
+      MYSQL_PASSWORD: disdp_pass
+      MYSQL_ROOT_PASSWORD: root_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  # 2. PHP-FPM (Laravel Backend)
+  app:
+    build: ./docker/php
+    container_name: disdp_app
+    restart: unless-stopped
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: fablab_drones
+      DB_USERNAME: disdp
+      DB_PASSWORD: disdp_pass
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      - db
+
+  # 3. Serveur Web Nginx (Reverse Proxy & Fichiers statiques Laravel)
+  web:
+    image: nginx:1.27-alpine
+    container_name: disdp_web
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+
+  # 4. Frontend Angular (Build multi-stage & Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: ./docker/frontend/Dockerfile
+    container_name: disdp_frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      - web
+
+  # 5. Interface d'administration Base de données
+  phpmyadmin:
+    image: phpmyadmin:5
+    container_name: disdp_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+
+volumes:
+  db_data:
