@@ -13,6 +13,7 @@ export interface Drone {
   longitude: number;
   altitude: number; // m
   speed: number; // m/s
+  targetSpeed?: number;
   heading: number; // degrés 0-359
   distanceKm: number; // distance parcourue (jour)
   maxRangeKm?: number;

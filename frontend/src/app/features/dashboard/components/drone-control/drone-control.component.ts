@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FlightMode } from '../../../../core/models/models';
 import { DroneService } from '../../../../core/services/drone.service';
 import { FlightControlService } from '../../../../core/services/flight-control.service';
@@ -15,6 +15,7 @@ import { DRONE_STATUS, FLIGHT_MODE } from '../../../../shared/utils/labels';
   template: `
     @if (drone(); as d) {
       <div class="w-full sm:w-auto flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-2.5 rounded-[12px] border border-[#1E3A5F] bg-[#112240] p-2 sm:px-3 sm:py-1.5 shadow-md">
+        <!-- Informations Drone sélectionné -->
         <div class="flex items-center gap-2">
           <span class="relative flex size-8 items-center justify-center rounded-lg border border-[#1E3A5F] bg-[#0C1E3D] text-[#38BDF8]">
             <app-icon name="drone" [size]="17" />
@@ -30,8 +31,47 @@ import { DRONE_STATUS, FLIGHT_MODE } from '../../../../shared/utils/labels';
           </div>
         </div>
 
-        <div class="flex items-center gap-2 ml-auto sm:ml-0">
+        <!-- Actions Opérationnelles & Contrôle de Vitesse -->
+        <div class="flex flex-wrap items-center gap-2 ml-auto sm:ml-0">
           @if (d.status === 'in-flight') {
+            <!-- ⚡ MODULE DE CONTRÔLE ET AUGMENTATION DE VITESSE EN VOL -->
+            <div class="flex items-center gap-1.5 rounded-lg border border-[#38BDF8]/30 bg-[#0C1E3D] px-2 py-1 shadow-sm">
+              <span class="flex items-center gap-1 text-[11px] font-bold text-[#F8FAFC] tabular-nums" title="Vitesse réelle de vol">
+                <app-icon name="gauge" [size]="13" class="text-[#38BDF8]" />
+                <span class="text-[#38BDF8]">{{ d.speed.toFixed(1) }}</span>
+                <span class="text-[9px] font-normal text-[#94A3B8]">m/s</span>
+                <span class="hidden md:inline text-[9px] text-[#64748B]">({{ (d.speed * 3.6).toFixed(0) }} km/h)</span>
+              </span>
+
+              <!-- Boutons Pas-à-Pas Diminuer / Accélérer -->
+              <div class="flex items-center gap-0.5 border-l border-[#1E3A5F] pl-1.5">
+                <button type="button" 
+                        class="flex size-5 items-center justify-center rounded border border-[#1E3A5F] bg-[#112240] text-[11px] font-bold text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#172A4D] transition cursor-pointer"
+                        (click)="decrease(d.id)"
+                        title="Ralentir (-2.5 m/s)">−</button>
+                <button type="button" 
+                        class="flex size-5 items-center justify-center rounded border border-[#38BDF8]/40 bg-[#172A4D] text-[11px] font-bold text-[#38BDF8] hover:text-[#F8FAFC] hover:bg-[#1E3A5F] transition cursor-pointer"
+                        (click)="increase(d.id)"
+                        title="Accélérer le drone (+2.5 m/s)">+</button>
+              </div>
+
+              <!-- Paliers Rapides de Vitesse -->
+              <div class="hidden lg:flex items-center gap-1 border-l border-[#1E3A5F] pl-1.5 text-[9px]">
+                <button type="button" 
+                        [class]="'rounded px-1.5 py-0.5 font-semibold transition cursor-pointer ' + (d.speed <= 8 ? 'bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/40' : 'text-[#94A3B8] hover:text-[#F8FAFC]')"
+                        (click)="setSpeed(d.id, 6)"
+                        title="Vitesse Économique (22 km/h)">6 m/s</button>
+                <button type="button" 
+                        [class]="'rounded px-1.5 py-0.5 font-semibold transition cursor-pointer ' + (d.speed > 8 && d.speed <= 18 ? 'bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/40' : 'text-[#94A3B8] hover:text-[#F8FAFC]')"
+                        (click)="setSpeed(d.id, 14)"
+                        title="Vitesse de Croisière Normale (50 km/h)">14 m/s</button>
+                <button type="button" 
+                        [class]="'rounded px-1.5 py-0.5 font-bold transition cursor-pointer ' + (d.speed > 18 ? 'bg-[#F59E0B]/20 text-[#FBBF24] border border-[#F59E0B]/40 shadow-xs' : 'text-[#F59E0B] hover:text-[#FBBF24]')"
+                        (click)="setSpeed(d.id, 26)"
+                        title="Plein Gaz / Vitesse Maximale Rapide (94 km/h)">🚀 Turbo (26m/s)</button>
+              </div>
+            </div>
+
             @if (d.rthActive) {
               <span class="rounded-full border border-[#F59E0B]/40 bg-[#F59E0B]/15 px-2 py-0.5 text-[10px] font-bold text-[#FBBF24] flex items-center gap-1 shadow-xs">
                 <span class="size-1.5 rounded-full bg-[#F59E0B] animate-pulse"></span>RTH {{ d.rthAltitude }}m (Slot #{{ d.rthSlot }})
@@ -49,6 +89,17 @@ import { DRONE_STATUS, FLIGHT_MODE } from '../../../../shared/utils/labels';
               <app-icon name="pause" [size]="12" /> <span class="hidden xs:inline">Arrêter</span>
             </button>
           } @else {
+            <!-- SÉLECTION DE LA VITESSE DE DÉCOLLAGE LORS DE LA MISE EN MARCHE -->
+            <div class="flex items-center gap-1.5 text-[11px] text-[#94A3B8]">
+              <span class="hidden sm:inline">Vitesse décollage :</span>
+              <select class="field !w-auto !rounded-lg !py-1 !pr-6 !text-[11px]" [value]="takeoffSpeed()" (change)="takeoffSpeed.set(+$any($event.target).value)">
+                <option value="6">6 m/s (Éco)</option>
+                <option value="12" selected>12 m/s (Croisière)</option>
+                <option value="20">20 m/s (Rapide)</option>
+                <option value="28">28 m/s (Vitesse max)</option>
+              </select>
+            </div>
+
             <button type="button" class="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#1E3A5F] bg-[#0C1E3D] px-2.5 sm:px-3 py-1.5 text-[11px] font-medium text-[#F8FAFC] transition hover:border-[#38BDF8]/40 hover:bg-[#172A4D] shadow-xs" (click)="connect(d.id)" title="Connecter le drone à la Station de Base FabLab UVCI">
               <app-icon name="radio" [size]="12" class="text-[#38BDF8]" /> Connexion
             </button>
@@ -68,6 +119,7 @@ export class DroneControlComponent {
   protected readonly drone = this.drones.selected;
   protected readonly meta = DRONE_STATUS;
   protected readonly round = Math.round;
+  protected readonly takeoffSpeed = signal<number>(12);
   protected readonly modes = (Object.keys(FLIGHT_MODE) as FlightMode[]).map((value) => ({ value, label: FLIGHT_MODE[value].label }));
 
   protected dot(s: keyof typeof DRONE_STATUS): string {
@@ -82,7 +134,7 @@ export class DroneControlComponent {
     this.control.connectStation(id);
   }
   protected start(id: string): void {
-    this.control.takeOff(id, 'manual');
+    this.control.takeOff(id, 'manual', this.takeoffSpeed());
   }
   protected stop(id: string, name: string): void {
     this.ui.askConfirm({ message: `Arrêter ${name} ? Le drone atterrit et la mission en cours est interrompue.`, confirmLabel: 'Arrêter', onConfirm: () => this.control.land(id) });
@@ -92,5 +144,14 @@ export class DroneControlComponent {
   }
   protected setMode(id: string, mode: FlightMode): void {
     this.control.setMode(id, mode);
+  }
+  protected increase(id: string): void {
+    this.control.increaseSpeed(id, 2.5);
+  }
+  protected decrease(id: string): void {
+    this.control.decreaseSpeed(id, 2.5);
+  }
+  protected setSpeed(id: string, speed: number): void {
+    this.control.setSpeed(id, speed);
   }
 }

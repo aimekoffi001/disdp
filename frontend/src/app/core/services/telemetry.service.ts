@@ -99,7 +99,8 @@ export class TelemetryService {
     if (d.status !== 'in-flight') return d;
 
     const wobble = d.flightMode === 'manual' ? 1.6 : d.flightMode === 'semi-auto' ? 1 : 0.5;
-    const speed = clamp(d.speed + jitter(0.3 * wobble), 5, 12);
+    const target = d.targetSpeed ?? d.speed ?? 12;
+    const speed = clamp(target + jitter(0.25 * wobble), 1, 35);
     let heading = (d.heading + jitter(7 * wobble) + 360) % 360;
 
     const base = APP_SETTINGS;
@@ -176,9 +177,9 @@ export class TelemetryService {
     const online = d.status !== 'offline';
 
     // Diagonales asynchrones (AVG=ARD et AVD=ARG)
-    const prevLoads = this.motorLoads.get(d.id) ?? [56, 50, 56, 50];
-    const d1 = clamp(prevLoads[0] + jitter(1.6), 44, 86);
-    const d2 = clamp(prevLoads[1] + jitter(1.6), 44, 86);
+    const targetLoad = clamp(40 + (d.speed / 30) * 50, 40, 95);
+    const d1 = clamp(targetLoad + jitter(1.5), 35, 98);
+    const d2 = clamp(targetLoad - 4 + jitter(1.5), 35, 98);
     const nextLoads = flying ? [d1, d2, d1, d2] : [0, 0, 0, 0];
     this.motorLoads.set(d.id, flying ? [d1, d2, d1, d2] : [56, 50, 56, 50]);
 

@@ -32,19 +32,48 @@ export class FlightControlService {
     inject(DestroyRef).onDestroy(() => sub.unsubscribe());
   }
 
-  takeOff(droneId: string, mode: FlightMode = 'manual'): OpResult {
+  takeOff(droneId: string, mode: FlightMode = 'manual', initialSpeed = 12.0): OpResult {
     const d = this.drones.byId(droneId);
     if (!d) return this.fail('Drone introuvable.');
     if (d.status === 'in-flight') return this.fail(`${d.name} est déjà en vol.`);
     if (d.status === 'maintenance') return this.fail(`${d.name} est en maintenance : décollage impossible.`);
     if (d.status === 'offline') return this.fail(`${d.name} est hors ligne : décollage impossible.`);
     if (d.batteryLevel < MIN_TAKEOFF_BATTERY) return this.fail(`Batterie trop faible (${Math.round(d.batteryLevel)} %) : minimum ${MIN_TAKEOFF_BATTERY} %.`);
-    this.drones.patch(droneId, { status: 'in-flight', speed: 5.5, altitude: 5, flightMode: mode });
-    this.notifications.success(`${d.name} décolle en mode ${FLIGHT_MODE[mode].label.toLowerCase()}.`);
+    const speed = Math.max(2, Math.min(35, initialSpeed));
+    this.drones.patch(droneId, { status: 'in-flight', speed, targetSpeed: speed, altitude: 15, flightMode: mode });
+    this.notifications.success(`${d.name} mis en marche : décollage à ${speed.toFixed(1)} m/s (${Math.round(speed * 3.6)} km/h).`);
 
-    // Synchronisation backend Laravel
+    // Synchronisation backend Laravel & BDD MySQL
     this.backend.takeOff(droneId);
+    this.backend.setDroneSpeed(droneId, speed);
     return { ok: true };
+  }
+
+  setSpeed(droneId: string, speedMs: number): OpResult {
+    const d = this.drones.byId(droneId);
+    if (!d) return this.fail('Drone introuvable.');
+    const safeSpeed = Math.max(1, Math.min(35, Math.round(speedMs * 10) / 10));
+    const kmh = Math.round(safeSpeed * 3.6);
+    this.drones.patch(droneId, { speed: safeSpeed, targetSpeed: safeSpeed });
+    this.notifications.success(`Vitesse de ${d.name} : ${safeSpeed.toFixed(1)} m/s (${kmh} km/h).`);
+
+    // Persistance en base de données MySQL
+    this.backend.setDroneSpeed(droneId, safeSpeed);
+    return { ok: true };
+  }
+
+  increaseSpeed(droneId: string, delta = 2.5): OpResult {
+    const d = this.drones.byId(droneId);
+    if (!d) return this.fail('Drone introuvable.');
+    const current = d.speed || 8;
+    return this.setSpeed(droneId, current + delta);
+  }
+
+  decreaseSpeed(droneId: string, delta = 2.5): OpResult {
+    const d = this.drones.byId(droneId);
+    if (!d) return this.fail('Drone introuvable.');
+    const current = d.speed || 8;
+    return this.setSpeed(droneId, current - delta);
   }
 
   land(droneId: string): OpResult {

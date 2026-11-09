@@ -153,6 +153,21 @@ export class BackendService {
     }
   }
 
+  async setDroneSpeed(id: string, speed: number): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/drones/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ vitesse_actuelle: Number(speed.toFixed(1)) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: this.extractErrorMessage(data, `Erreur ${res.status}`) };
+      return { ok: true, data: data.drone };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
   async deleteDrone(id: string): Promise<OpResult> {
     try {
       const res = await fetch(`${this.baseUrl}/api/drones/${id}`, {
