@@ -90,3 +90,4 @@ class ZoneStatiqueController extends Controller
         ]);
     }
 }
+

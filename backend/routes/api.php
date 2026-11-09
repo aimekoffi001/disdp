@@ -34,6 +34,7 @@ Route::apiResource('drones', DroneController::class);
 Route::apiResource('missions', MissionController::class);
 
 // 3. Utilisateurs
+Route::post('/login', [UtilisateurController::class, 'login']);
 Route::apiResource('utilisateurs', UtilisateurController::class);
 
 // 4. Détections
@@ -67,3 +68,4 @@ Route::apiResource('videos', VideoController::class);
 
 // 13. Sons & Émissions Sonores
 Route::apiResource('sons', SonController::class);
+

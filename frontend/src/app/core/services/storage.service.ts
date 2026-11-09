@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { APP_SETTINGS } from '../config/app-settings';
 
-/** Accès localStorage isolé : remplaçable par un appel API sans toucher aux composants. */
+/** Accès stockage local isolé pour les préférences et la session active. */
 @Injectable({ providedIn: 'root' })
 export class StorageService {
   get<T>(key: string, fallback: T): T {
@@ -19,6 +19,12 @@ export class StorageService {
     } catch (e) {
       console.warn('[Storage] écriture impossible', e);
     }
+  }
+
+  remove(key: string): void {
+    try {
+      localStorage.removeItem(APP_SETTINGS.storagePrefix + key);
+    } catch {}
   }
 
   clearAll(): void {

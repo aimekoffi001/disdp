@@ -97,3 +97,4 @@ class DetectionController extends Controller
         ]);
     }
 }
+

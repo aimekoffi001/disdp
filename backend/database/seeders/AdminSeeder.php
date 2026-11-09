@@ -24,6 +24,18 @@ class AdminSeeder extends Seeder
                 'actif' => 1,
             ]
         );
+
+        Utilisateur::updateOrCreate(
+            ['email' => 'pilote.kone@fablab.ci'],
+            [
+                'nom' => 'Koné',
+                'prenom' => 'Ibrahim',
+                'password' => Hash::make('password123'),
+                'role' => 'pilote',
+                'telephone' => '+225 05 04 03 02 01',
+                'actif' => 1,
+            ]
+        );
     }
 }
 

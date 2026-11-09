@@ -81,3 +81,4 @@ class CapteurController extends Controller
         ]);
     }
 }
+

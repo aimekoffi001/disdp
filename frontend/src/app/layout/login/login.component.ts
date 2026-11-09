@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AuthService, DEMO_ACCOUNTS } from '../../core/services/auth.service';
+import { AuthService, DB_ACCOUNTS } from '../../core/services/auth.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
 @Component({
@@ -27,20 +27,22 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             <input id="lg-pw" type="password" autocomplete="current-password" class="field" formControlName="password" />
             @if (show('password')) { <p class="field-error">Mot de passe requis.</p> }
           </div>
-          @if (error()) { <p class="field-error" role="alert">{{ error() }}</p> }
+          @if (error()) { <p class="field-error text-center" role="alert">{{ error() }}</p> }
           <button type="submit" class="btn-pill w-full !py-2.5 !text-xs cursor-pointer" [disabled]="auth.loading()">
-            {{ auth.loading() ? 'Connexion…' : 'Se connecter' }}
+            {{ auth.loading() ? 'Connexion en cours…' : 'Se connecter' }}
           </button>
         </form>
 
         <div class="mt-5 rounded-lg border border-[#1E3A5F] bg-[#0C1E3D] p-3 text-[11px] text-[#94A3B8]">
-          <div class="mb-1.5 font-semibold text-[#F8FAFC]">Comptes de démonstration</div>
+          <div class="mb-1.5 font-semibold text-[#F8FAFC]">Comptes enregistrés en base MySQL</div>
           @for (a of accounts; track a.email) {
             <button type="button" class="flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-[#172A4D] transition-colors cursor-pointer" (click)="fill(a.email, a.password)">
-              <span class="font-medium text-[#F8FAFC]">{{ a.role }}</span><span class="text-[#94A3B8]">{{ a.email }}</span>
+              <span class="font-medium text-[#F8FAFC]">{{ a.role }}</span><span class="text-[#38BDF8]">{{ a.email }}</span>
             </button>
           }
-          <div class="mt-1 px-2 text-[10px]">Mot de passe : <span class="font-semibold text-[#F8FAFC]">demo1234</span></div>
+          <div class="mt-2 pt-2 border-t border-[#1E3A5F] text-[10px] text-[#94A3B8]">
+            Mot de passe par défaut : <span class="font-semibold text-[#F8FAFC] font-mono">password123</span>
+          </div>
         </div>
       </div>
     </div>
@@ -50,12 +52,12 @@ export class LoginComponent {
   protected readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
-  protected readonly accounts = DEMO_ACCOUNTS;
+  protected readonly accounts = DB_ACCOUNTS;
   protected readonly error = signal<string | null>(null);
 
   protected readonly form = this.fb.group({
-    email: ['admin@dispd.demo', [Validators.required, Validators.email]],
-    password: ['demo1234', [Validators.required]],
+    email: ['admin@fablab.ci', [Validators.required, Validators.email]],
+    password: ['password123', [Validators.required]],
   });
 
   protected show(f: 'email' | 'password'): boolean {
@@ -68,14 +70,16 @@ export class LoginComponent {
     this.error.set(null);
   }
 
-  protected submit(): void {
+  protected async submit(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
     const { email, password } = this.form.getRawValue();
     this.error.set(null);
-    const ok = this.auth.login(email ?? '', password ?? '');
-    if (!ok) this.error.set('Identifiants invalides (utilisez un des comptes ci-dessous).');
+    const res = await this.auth.login(email ?? '', password ?? '');
+    if (!res.ok) {
+      this.error.set(res.error || 'Identifiants incorrects.');
+    }
   }
 }
