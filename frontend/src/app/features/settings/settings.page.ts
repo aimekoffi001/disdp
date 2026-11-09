@@ -34,9 +34,9 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
         </div>
       </section>
       <section class="panel">
-        <div class="panel-title">Données de démonstration</div>
-        <p class="text-xs text-[#94A3B8]">Les modifications sont conservées dans le navigateur (localStorage). La réinitialisation restaure le jeu de données d'origine.</p>
-        <button type="button" class="btn-pill mt-3 !bg-[#EF4444] hover:!bg-[#DC2626] text-white" (click)="askReset()">Réinitialiser les données</button>
+        <div class="panel-title">Synchronisation Base de Données</div>
+        <p class="text-xs text-[#94A3B8]">Toutes les entités (drones, missions, alertes, vols) sont connectées à 100% à la base MySQL via l'API REST Laravel. Cliquez ci-dessous pour forcer une resynchronisation immédiate.</p>
+        <button type="button" class="btn-pill mt-3 !bg-[#10B981] hover:!bg-[#059669] text-white" (click)="refreshAll()">Synchroniser depuis MySQL</button>
       </section>
       <section class="panel">
         <div class="panel-title">Flux vidéo de démonstration</div>
@@ -61,17 +61,13 @@ export class SettingsPage {
   protected readonly interval = APP_SETTINGS.telemetryIntervalMs;
   protected readonly sources = APP_SETTINGS.demoVideoSources;
 
-  protected askReset(): void {
-    this.ui.askConfirm({
-      message: 'Restaurer toutes les données de démonstration ? Vos modifications seront perdues.',
-      confirmLabel: 'Réinitialiser',
-      onConfirm: () => {
-        this.drones.reset();
-        this.missions.reset();
-        this.alerts.reset();
-        this.flights.reset();
-        this.notifications.success('Données de démonstration restaurées.');
-      },
-    });
+  protected async refreshAll(): Promise<void> {
+    await Promise.all([
+      this.drones.loadFromBackend(),
+      this.missions.loadFromBackend(),
+      this.alerts.loadFromBackend(),
+      this.flights.loadFromBackend(),
+    ]);
+    this.notifications.success('Données synchronisées avec succès depuis la base de données MySQL.');
   }
 }

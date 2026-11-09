@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MissionStatus } from '../../../../core/models/models';
+import { Mission, MissionStatus } from '../../../../core/models/models';
 import { DetailService } from '../../../../core/services/detail.service';
 import { DroneService } from '../../../../core/services/drone.service';
 import { MissionService } from '../../../../core/services/mission.service';
@@ -38,28 +38,39 @@ import { MISSION_STATUS, fmtDuration } from '../../../../shared/utils/labels';
         </div>
       }
 
-      <div class="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
-        <table class="tbl">
-          <thead><tr><th>Mission</th><th>Drone</th><th>Durée</th><th>Statut</th><th><span class="sr-only">Actions</span></th></tr></thead>
-          <tbody>
-            @for (m of rows(); track m.id) {
-              <tr>
-                <td class="font-bold text-[#F8FAFC]" [attr.title]="m.description">{{ m.name }}</td>
-                <td class="text-[#94A3B8] font-medium">{{ drones.nameOf(m.droneId) }}</td>
-                <td class="text-[#94A3B8] tabular-nums">{{ fmt(m.durationMin) }}</td>
-                <td><app-status-badge [tone]="meta[m.status].tone">{{ meta[m.status].label }}</app-status-badge></td>
-                <td class="text-right">
-                  <button type="button" class="icon-btn" aria-label="Voir la fiche" (click)="details.mission(m)"><app-icon name="eye" [size]="13" /></button>
-                  <button type="button" class="icon-btn" aria-label="Modifier" (click)="ui.openMissionForm(m)"><app-icon name="pencil" [size]="13" /></button>
-                  <button type="button" class="icon-btn hover:!text-[#F87171]" aria-label="Supprimer" (click)="remove(m.id)"><app-icon name="trash" [size]="13" /></button>
-                </td>
-              </tr>
-            } @empty {
-              <tr><td colspan="5" class="py-4 text-center text-[#94A3B8]">Aucune mission.</td></tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      @if (missions.loading()) {
+        <div class="py-8 text-center text-sm text-[#38BDF8] flex items-center justify-center gap-2">
+          <span class="inline-block size-4 animate-spin rounded-full border-2 border-[#38BDF8] border-t-transparent"></span>
+          <span>Chargement...</span>
+        </div>
+      } @else {
+        <div class="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
+          <table class="tbl">
+            <thead><tr><th>Mission</th><th>Drone</th><th>Durée</th><th>Statut</th><th><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+              @for (m of rows(); track m.id) {
+                <tr>
+                  <td class="font-bold text-[#F8FAFC]" [attr.title]="m.description">{{ m.name }}</td>
+                  <td class="text-[#94A3B8] font-medium">{{ drones.nameOf(m.droneId) }}</td>
+                  <td class="text-[#94A3B8] tabular-nums">{{ fmt(m.durationMin) }}</td>
+                  <td><app-status-badge [tone]="meta[m.status].tone">{{ meta[m.status].label }}</app-status-badge></td>
+                  <td class="text-right">
+                    <button type="button" class="icon-btn" aria-label="Voir la fiche" (click)="details.mission(m)"><app-icon name="eye" [size]="13" /></button>
+                    <button type="button" class="icon-btn" aria-label="Modifier" (click)="ui.openMissionForm(m)"><app-icon name="pencil" [size]="13" /></button>
+                    <button type="button" class="icon-btn hover:!text-[#F87171]" aria-label="Supprimer" (click)="remove(m)"><app-icon name="trash" [size]="13" /></button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="py-8 text-center text-[#94A3B8]">
+                    Aucune mission. Ajoutez votre première mission.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
     </section>
   `,
 })
@@ -80,17 +91,19 @@ export class MissionsTableComponent {
   }));
 
   protected readonly rows = computed(() => {
+    const list = this.missions.missions();
     const st = this.status();
-    const all = this.missions.missions();
-    const filtered = st ? all.filter((m) => m.status === st) : all;
-    return this.full() ? filtered : filtered.slice(0, 5);
+    const filtered = st ? list.filter((m) => m.status === st) : list;
+    return this.full() ? filtered : filtered.filter((m) => m.status === 'in-progress');
   });
 
-  protected remove(id: string): void {
+  protected remove(m: Mission): void {
     this.ui.askConfirm({
-      message: 'Annuler cette mission ? Les programmations associées seront annulées.',
-      confirmLabel: 'Annuler la mission',
-      onConfirm: () => this.missions.cancel(id),
+      message: `Voulez-vous vraiment supprimer la mission « ${m.name} » ?`,
+      confirmLabel: 'Supprimer',
+      onConfirm: async () => {
+        await this.missions.remove(m.id);
+      },
     });
   }
 }

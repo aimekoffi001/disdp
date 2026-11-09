@@ -37,17 +37,21 @@ import { RouterLink } from '@angular/router';
         <table class="tbl">
           <thead><tr><th>Date</th><th>Drone</th><th>Mission</th><th>Durée</th><th>Statut</th><th><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
-            @for (f of rows(); track f.id) {
-              <tr>
-                <td class="text-[#94A3B8] font-medium">{{ fmtD(f.date) }}</td>
-                <td class="font-bold text-[#F8FAFC]">{{ drones.nameOf(f.droneId) }}</td>
-                <td class="text-[#F8FAFC]">{{ f.missionName }}</td>
-                <td class="text-[#94A3B8] tabular-nums">{{ fmtDur(f.durationMin) }}</td>
-                <td><app-status-badge [tone]="f.status === 'completed' ? 'green' : 'amber'">{{ f.status === 'completed' ? 'Terminée' : 'Interrompue' }}</app-status-badge></td>
-                <td class="text-right"><button type="button" class="icon-btn" aria-label="Détails du vol" (click)="details.flight(f)"><app-icon name="eye" [size]="13" /></button></td>
-              </tr>
-            } @empty {
-              <tr><td colspan="6" class="py-4 text-center text-[#94A3B8]">Aucun vol.</td></tr>
+            @if (flights.loading()) {
+              <tr><td colspan="6" class="py-6 text-center text-[#38BDF8] animate-pulse">Chargement de l'historique...</td></tr>
+            } @else {
+              @for (f of rows(); track f.id) {
+                <tr>
+                  <td class="text-[#94A3B8] font-medium">{{ fmtD(f.date) }}</td>
+                  <td class="font-bold text-[#F8FAFC]">{{ drones.nameOf(f.droneId) }}</td>
+                  <td class="text-[#F8FAFC]">{{ f.missionName }}</td>
+                  <td class="text-[#94A3B8] tabular-nums">{{ fmtDur(f.durationMin) }}</td>
+                  <td><app-status-badge [tone]="f.status === 'completed' ? 'green' : 'amber'">{{ f.status === 'completed' ? 'Terminée' : 'Interrompue' }}</app-status-badge></td>
+                  <td class="text-right"><button type="button" class="icon-btn" aria-label="Détails du vol" (click)="details.flight(f)"><app-icon name="eye" [size]="13" /></button></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="py-6 text-center text-[#94A3B8]">Aucun vol enregistré en base de données.</td></tr>
+              }
             }
           </tbody>
         </table>
@@ -56,7 +60,7 @@ import { RouterLink } from '@angular/router';
   `,
 })
 export class FlightHistoryComponent {
-  private readonly flights = inject(FlightService);
+  protected readonly flights = inject(FlightService);
   protected readonly drones = inject(DroneService);
   protected readonly details = inject(DetailService);
 

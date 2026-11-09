@@ -1,25 +1,27 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { APP_SETTINGS } from '../config/app-settings';
-import { createMockDrones, MOCK_PREVIOUS_DAY } from '../data/mock-data';
 import { Drone, DroneInput, LatLng, OpResult } from '../models/models';
 import { BackendService } from './backend.service';
 import { NotificationService } from './notification.service';
-import { StorageService } from './storage.service';
 
-/** Source de vérité unique pour les drones. Connecté au backend Laravel & BDD MySQL. */
+/** Source de vérité unique pour les drones, connectée à 100% à MySQL via l'API Laravel. */
 @Injectable({ providedIn: 'root' })
 export class DroneService {
-  private readonly storage = inject(StorageService);
   private readonly notifications = inject(NotificationService);
   private readonly backend = inject(BackendService);
 
-  private readonly _drones = signal<Drone[]>(this.storage.get('drones', createMockDrones()));
+  private readonly _drones = signal<Drone[]>([]);
   readonly drones = this._drones.asReadonly();
-  readonly selectedId = signal<string>(this._drones()[0]?.id ?? '1');
+  readonly selectedId = signal<string>('');
+  readonly loading = signal<boolean>(true);
+  readonly error = signal<string | null>(null);
 
-  readonly selected = computed(() => this._drones().find((d) => d.id === this.selectedId()) ?? this._drones()[0]);
+  readonly selected = computed(() => {
+    const list = this._drones();
+    return list.find((d) => d.id === this.selectedId()) ?? list[0];
+  });
 
-  // --- Statistiques calculées (évoluent automatiquement en temps réel) ---
+  // --- Statistiques calculées en direct sur les vraies données MySQL ---
   readonly averageBattery = computed(() => {
     const d = this._drones();
     return d.length ? d.reduce((s, x) => s + x.batteryLevel, 0) / d.length : 0;
@@ -33,39 +35,43 @@ export class DroneService {
   });
   readonly maxRangeKm = APP_SETTINGS.maxRangeKm;
   readonly effectiveMaxRangeKm = computed(() => {
-    const flying = this._drones().filter((d) => d.status === 'in-flight');
-    if (flying.length > 0) {
-      const sel = this.selected();
-      const target = (sel && sel.status === 'in-flight') ? sel : flying[0];
-      return target.currentRangeKm ?? Math.round((target.maxRangeKm ?? APP_SETTINGS.maxRangeKm) * (target.batteryLevel / 100) * 10) / 10;
-    }
     const sel = this.selected();
-    const nominal = sel?.maxRangeKm ?? APP_SETTINGS.maxRangeKm;
-    const batt = sel?.batteryLevel ?? this.averageBattery();
-    return Math.round((nominal * (batt / 100)) * 10) / 10;
+    if (!sel) return 0;
+    const nominal = sel.maxRangeKm ?? APP_SETTINGS.maxRangeKm;
+    return Math.round((nominal * (sel.batteryLevel / 100)) * 10) / 10;
   });
-  readonly previous = MOCK_PREVIOUS_DAY;
+  readonly previous = { battery: 0, distanceKm: 0, speed: 0 };
 
   constructor() {
     this.loadFromBackend();
   }
 
   async loadFromBackend(): Promise<void> {
-    const data = await this.backend.fetchDashboard();
-    if (data?.drones && data.drones.length > 0) {
-      const mapped = this.backend.mapDrones(data.drones);
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      const mapped = await this.backend.getDrones();
       this._drones.set(mapped);
-      const inFlight = mapped.find((d) => d.status === 'in-flight');
-      if (!this.selectedId() || !mapped.some((d) => d.id === this.selectedId())) {
-        this.selectedId.set(inFlight ? inFlight.id : mapped[0].id);
+      if (mapped.length > 0) {
+        if (!this.selectedId() || !mapped.some((d) => d.id === this.selectedId())) {
+          const inFlight = mapped.find((d) => d.status === 'in-flight');
+          this.selectedId.set(inFlight ? inFlight.id : mapped[0].id);
+        }
+      } else {
+        this.selectedId.set('');
       }
-      this.persist();
+      this.error.set(null);
+    } catch (err: any) {
+      this.error.set(err.message || 'Erreur lors de la récupération des drones');
+    } finally {
+      this.loading.set(false);
     }
   }
 
   byId(id: string | undefined): Drone | undefined {
     return id ? this._drones().find((d) => d.id === id) : undefined;
   }
+
   nameOf(id: string | undefined): string {
     return this.byId(id)?.name ?? '—';
   }
@@ -74,114 +80,78 @@ export class DroneService {
     if (this.byId(id)) this.selectedId.set(id);
   }
 
-  add(input: DroneInput): OpResult {
-    const error = this.validate(input);
-    if (error) return this.fail(error);
-    const id = 'd' + Date.now().toString(36);
-    const drone: Drone = {
-      id,
-      ...this.clean(input),
-      latitude: APP_SETTINGS.baseLat - 0.0065,
-      longitude: APP_SETTINGS.baseLng + (Math.random() - 0.5) * 0.006,
-      altitude: 0, speed: 0, heading: 0, distanceKm: 0, flightMode: 'manual',
-    };
-    this._drones.update((l) => [...l, drone]);
-    this.persist();
-    this.notifications.success(`Drone « ${drone.name} » ajouté.`);
+  async add(input: DroneInput): Promise<OpResult> {
+    const cleanInput = this.clean(input);
+    const res = await this.backend.createDrone(cleanInput);
 
-    // Persistance asynchrone dans MySQL via Laravel
-    this.backend.createDrone(input).then((res) => {
-      if (res.ok) this.loadFromBackend();
-    });
+    if (!res.ok) {
+      return res;
+    }
 
+    await this.loadFromBackend();
+    this.notifications.success(`Drone « ${cleanInput.name} » ajouté en base de données.`);
     return { ok: true };
   }
 
-  update(id: string, input: DroneInput): OpResult {
-    const error = this.validate(input, id);
-    if (error) return this.fail(error);
-    this._drones.update((l) =>
-      l.map((d) => {
-        if (d.id !== id) return d;
-        const next = { ...d, ...this.clean(input) };
-        if (next.status !== 'in-flight') { next.speed = 0; next.altitude = 0; }
-        return next;
-      }),
-    );
-    this.persist();
-    this.notifications.success('Drone mis à jour.');
+  async update(id: string, input: DroneInput): Promise<OpResult> {
+    const cleanInput = this.clean(input);
+    const res = await this.backend.updateDrone(id, cleanInput);
+
+    if (!res.ok) {
+      return res;
+    }
+
+    await this.loadFromBackend();
+    this.notifications.success(`Drone « ${cleanInput.name} » modifié avec succès.`);
     return { ok: true };
   }
 
-  remove(id: string): OpResult {
+  async remove(id: string): Promise<OpResult> {
     const d = this.byId(id);
-    if (!d) return this.fail('Drone introuvable.');
-    if (d.status === 'in-flight') return this.fail('Impossible de supprimer un drone en vol.');
-    this._drones.update((l) => l.filter((x) => x.id !== id));
-    if (this.selectedId() === id) this.selectedId.set(this._drones()[0]?.id ?? '');
-    this.persist();
-    this.notifications.success(`Drone « ${d.name} » supprimé.`);
+    const name = d ? d.name : id;
+
+    const res = await this.backend.deleteDrone(id);
+    if (!res.ok) {
+      this.notifications.push(res.error ?? 'Erreur lors de la suppression', 'error');
+      return res;
+    }
+
+    await this.loadFromBackend();
+    this.notifications.success(`Drone « ${name} » définitivement supprimé.`);
     return { ok: true };
   }
 
-  /** Mise à jour issue de la télémétrie simulée : pas de persistance (haute fréquence). */
   applyTelemetry(next: Drone[]): void {
     this._drones.set(next);
   }
 
-  /** Modification d'état (décollage, atterrissage, mode de vol…) avec persistance. */
-  patch(id: string, changes: Partial<Drone>): void {
+  async patch(id: string, changes: Partial<Drone>): Promise<void> {
     this._drones.update((l) => l.map((d) => (d.id === id ? { ...d, ...changes } : d)));
-    this.persist();
   }
 
   setMission(droneId: string, missionId: string | undefined): void {
     this._drones.update((l) => l.map((d) => (d.id === droneId ? { ...d, currentMissionId: missionId } : d)));
-    this.persist();
   }
 
   assignPerimeter(droneId: string, perimeter: LatLng[] | undefined, zoneName?: string): void {
     this._drones.update((l) => l.map((d) => (d.id === droneId ? { ...d, assignedPerimeter: perimeter, assignedZoneName: zoneName } : d)));
-    this.persist();
     if (zoneName) {
-      this.notifications.success(`Zone « ${zoneName} » assignée au drone en temps réel.`);
+      this.notifications.success(`Zone « ${zoneName} » assignée au drone.`);
     } else {
-      this.notifications.push('Périmètre libéré : vol standard rétabli.', 'info');
+      this.notifications.push('Périmètre libéré.', 'info');
     }
   }
 
-  reset(): void {
-    this._drones.set(createMockDrones());
-    this.selectedId.set(this._drones()[0].id);
-    this.persist();
-  }
-
   persist(): void {
-    this.storage.set('drones', this._drones());
+    // Les mutations sont persistées directement en BDD MySQL via l'API REST Laravel.
   }
 
   private clean(i: DroneInput): DroneInput {
     return {
       name: i.name.trim(),
-      code: i.code.trim().toUpperCase(),
+      code: i.code ? i.code.trim().toUpperCase() : '',
       status: i.status,
-      batteryLevel: Math.min(100, Math.max(0, Math.round(Number(i.batteryLevel)))),
+      batteryLevel: Number(i.batteryLevel),
     };
-  }
-
-  private validate(i: DroneInput, ignoreId?: string): string | null {
-    const name = i.name?.trim();
-    const code = i.code?.trim().toUpperCase();
-    if (!name) return 'Le nom est obligatoire.';
-    if (!code || !/^[A-Z0-9\-_]{3,12}$/i.test(code)) return 'Le code doit contenir entre 3 et 12 caractères (ex. DRN-001, DR-001).';
-    if (this._drones().some((d) => d.id !== ignoreId && d.code === code)) return `Le code ${code} existe déjà.`;
-    if (this._drones().some((d) => d.id !== ignoreId && d.name.toLowerCase() === name.toLowerCase())) return `Le nom « ${name} » existe déjà.`;
-    const b = Number(i.batteryLevel);
-    if (!Number.isFinite(b) || b < 0 || b > 100) return 'La batterie doit être comprise entre 0 et 100 %.';
-    return null;
-  }
-
-  private fail(error: string): OpResult {
-    return { ok: false, error };
   }
 }

@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { MOCK_ZONES } from '../../core/data/mock-data';
 import { LatLng } from '../../core/models/models';
 import { DroneService } from '../../core/services/drone.service';
 import { FlightService } from '../../core/services/flight.service';
 import { MissionService } from '../../core/services/mission.service';
+import { ZoneService } from '../../core/services/zone.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { fmtArea, pointInPolygon, polygonAreaM2 } from '../../shared/utils/geo';
@@ -75,21 +75,23 @@ import { DroneMapComponent } from '../dashboard/components/drone-map/drone-map.c
 })
 export class SurveillanceZonesPage {
   protected readonly drones = inject(DroneService);
+  protected readonly zoneService = inject(ZoneService);
   private readonly missions = inject(MissionService);
   private readonly flights = inject(FlightService);
   protected readonly meta = DRONE_STATUS;
   protected readonly modes = FLIGHT_MODE;
 
-  protected readonly live = computed(() =>
-    this.drones.drones().map((d) => ({
+  protected readonly live = computed(() => {
+    const zones = this.zoneService.zones();
+    return this.drones.drones().map((d) => ({
       ...d,
-      zone: MOCK_ZONES.find((z) => pointInPolygon([d.latitude, d.longitude], z.polygon))?.name ?? 'Hors zone',
-    })),
-  );
+      zone: zones.find((z) => pointInPolygon([d.latitude, d.longitude], z.polygon))?.name ?? 'Hors zone',
+    }));
+  });
 
   protected readonly zones = computed(() => {
     const list = this.drones.drones();
-    return MOCK_ZONES.map((z) => {
+    return this.zoneService.zones().map((z) => {
       const inside = list.filter((d) => pointInPolygon([d.latitude, d.longitude], z.polygon)).map((d) => d.name);
       return {
         id: z.id,

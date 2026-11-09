@@ -17,8 +17,8 @@ import { FLIGHT_MODE, describeModePlan, toLocalInput } from '../../shared/utils/
   template: `
     @if (ui.scheduleForm(); as ctx) {
       <app-modal [title]="ctx.flight ? 'Modifier la programmation' : 'Programmer un vol'" [width]="980" (closed)="close()">
-        <p class="mb-3 rounded-lg border border-[#F59E0B]/30 bg-[#F59E0B]/10 px-3 py-1.5 text-[11px] text-[#FBBF24]">
-          Mode démonstration : la programmation est enregistrée localement et exécutée par la simulation. Aucun ordre n'est envoyé à un drone réel.
+        <p class="mb-3 rounded-lg border border-[#38BDF8]/30 bg-[#38BDF8]/10 px-3 py-1.5 text-[11px] text-[#38BDF8]">
+          Planification de vol officielle DISDP · Connectée à la base de données MySQL.
         </p>
         <form [formGroup]="form" (ngSubmit)="submit()" class="grid gap-4 lg:grid-cols-[320px_1fr]" novalidate>
           <div class="space-y-3">
@@ -164,7 +164,7 @@ export class ScheduleFormComponent {
     return { initial: v.initial, steps };
   }
 
-  protected submit(): void {
+  protected async submit(): Promise<void> {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
     const v = this.form.getRawValue();
@@ -176,7 +176,7 @@ export class ScheduleFormComponent {
       perimeters: this.perimeters(),
     };
     const ctx = this.ui.scheduleForm();
-    const res = ctx?.flight ? this.flights.update(ctx.flight.id, value) : this.flights.add(value);
+    const res = ctx?.flight ? await this.flights.update(ctx.flight.id, value) : await this.flights.add(value);
     if (res.ok) this.close();
     else this.error.set(res.error ?? 'Opération impossible.');
   }

@@ -1,5 +1,9 @@
 import { Injectable, signal } from '@angular/core';
-import { Alert, AlertSeverity, AlertStatus, Drone, DroneInput, DroneStatus, FlightMode, Mission, MissionInput, MissionStatus, OpResult, SurveillanceZone } from '../models/models';
+import {
+  Alert, AlertSeverity, AlertStatus, Drone, DroneInput, DroneStatus,
+  FlightMode, FlightRecord, Mission, MissionInput, MissionStatus,
+  OpResult, ScheduledFlight, SurveillanceZone
+} from '../models/models';
 
 export interface LaravelDashboardResponse {
   user?: any;
@@ -27,17 +31,29 @@ export class BackendService {
   readonly baseUrl: string = this.detectBaseUrl();
   readonly isConnected = signal<boolean>(false);
   readonly lastSync = signal<Date | null>(null);
+  readonly lastError = signal<string | null>(null);
 
   private detectBaseUrl(): string {
     if (typeof window !== 'undefined') {
       const port = window.location.port;
-      // If running on Angular dev server port (4200 or 3000) without proxy, direct to Laravel
-      if (port === '4200') {
+      if (port === '4200' || port === '3000') {
         return 'http://127.0.0.1:8000';
       }
     }
     return '';
   }
+
+  private extractErrorMessage(data: any, fallback: string): string {
+    if (data?.errors && typeof data.errors === 'object') {
+      const messages = Object.values(data.errors).flat();
+      if (messages.length > 0) return messages.join(' ');
+    }
+    return data?.message || data?.error || fallback;
+  }
+
+  // ==========================================
+  // DASHBOARD GLOBAL
+  // ==========================================
 
   async fetchDashboard(): Promise<LaravelDashboardResponse | null> {
     try {
@@ -50,18 +66,379 @@ export class BackendService {
       const data: LaravelDashboardResponse = await res.json();
       this.isConnected.set(true);
       this.lastSync.set(new Date());
+      this.lastError.set(null);
       return data;
-    } catch (err) {
-      console.warn('[BackendService] Erreur lors du chargement de /api/dashboard:', err);
+    } catch (err: any) {
       this.isConnected.set(false);
+      this.lastError.set(err.message);
       return null;
     }
   }
 
+  // ==========================================
+  // DRONES (CRUD 100% MySQL)
+  // ==========================================
+
+  async getDrones(): Promise<Drone[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/drones`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      const raw = await res.json();
+      this.isConnected.set(true);
+      return this.mapDrones(Array.isArray(raw) ? raw : []);
+    } catch (err: any) {
+      this.lastError.set(err.message);
+      return [];
+    }
+  }
+
+  async createDrone(input: DroneInput): Promise<OpResult> {
+    try {
+      const payload: Record<string, any> = {
+        nom: input.name,
+        statut: input.status === 'in-flight' ? 'en_vol' : (input.status === 'maintenance' ? 'en_maintenance' : (input.status === 'offline' ? 'hors_ligne' : 'disponible')),
+        niveau_batterie: Number(input.batteryLevel),
+      };
+      if (input.code) {
+        payload['code_drone'] = input.code;
+      }
+
+      const res = await fetch(`${this.baseUrl}/api/drones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const errorMsg = this.extractErrorMessage(data, `Erreur ${res.status} lors de l'enregistrement du drone.`);
+        return { ok: false, error: errorMsg };
+      }
+
+      return { ok: true, data: data.drone };
+    } catch (err: any) {
+      return { ok: false, error: `Impossible de contacter le serveur : ${err.message}` };
+    }
+  }
+
+  async updateDrone(id: string, input: Partial<DroneInput>): Promise<OpResult> {
+    try {
+      const payload: Record<string, any> = {};
+      if (input.name !== undefined) payload['nom'] = input.name;
+      if (input.code !== undefined) payload['code_drone'] = input.code;
+      if (input.batteryLevel !== undefined) payload['niveau_batterie'] = Number(input.batteryLevel);
+      if (input.status !== undefined) {
+        payload['statut'] = input.status === 'in-flight' ? 'en_vol' : (input.status === 'maintenance' ? 'en_maintenance' : (input.status === 'offline' ? 'hors_ligne' : 'disponible'));
+      }
+
+      const res = await fetch(`${this.baseUrl}/api/drones/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const errorMsg = this.extractErrorMessage(data, `Erreur ${res.status} lors de la modification du drone.`);
+        return { ok: false, error: errorMsg };
+      }
+
+      return { ok: true, data: data.drone };
+    } catch (err: any) {
+      return { ok: false, error: `Impossible de contacter le serveur : ${err.message}` };
+    }
+  }
+
+  async deleteDrone(id: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/drones/${id}`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json' },
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const errorMsg = this.extractErrorMessage(data, `Erreur ${res.status} lors de la suppression du drone.`);
+        return { ok: false, error: errorMsg };
+      }
+
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: `Impossible de contacter le serveur : ${err.message}` };
+    }
+  }
+
+  // ==========================================
+  // MISSIONS (CRUD 100% MySQL)
+  // ==========================================
+
+  async getMissions(): Promise<Mission[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/missions`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      const raw = await res.json();
+      return this.mapMissions(Array.isArray(raw) ? raw : []);
+    } catch (err: any) {
+      this.lastError.set(err.message);
+      return [];
+    }
+  }
+
+  async createMission(input: MissionInput): Promise<OpResult> {
+    try {
+      const payload: Record<string, any> = {
+        nom: input.name,
+        description: input.description,
+        statut: 'planifiee',
+        type_mission: 'surveillance',
+      };
+      if (input.droneId) payload['drone_id'] = Number(input.droneId);
+
+      const res = await fetch(`${this.baseUrl}/api/missions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        return { ok: false, error: this.extractErrorMessage(data, `Erreur ${res.status} lors de la création de la mission.`) };
+      }
+
+      return { ok: true, data: data.mission };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  async updateMission(id: string, input: Partial<MissionInput>): Promise<OpResult> {
+    try {
+      const payload: Record<string, any> = {};
+      if (input.name !== undefined) payload['nom'] = input.name;
+      if (input.description !== undefined) payload['description'] = input.description;
+      if (input.droneId !== undefined) payload['drone_id'] = Number(input.droneId);
+
+      const res = await fetch(`${this.baseUrl}/api/missions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: this.extractErrorMessage(data, `Erreur ${res.status}`) };
+      return { ok: true, data: data.mission };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  async deleteMission(id: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/missions/${id}`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: this.extractErrorMessage(data, `Erreur ${res.status}`) };
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  // ==========================================
+  // ALERTES / INCIDENTS (100% MySQL)
+  // ==========================================
+
+  async getAlerts(): Promise<Alert[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/incidents`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw = await res.json();
+      return this.mapAlerts(Array.isArray(raw) ? raw : []);
+    } catch {
+      return [];
+    }
+  }
+
+  async deleteAlert(id: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/incidents/${id}`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json' },
+      });
+      return { ok: res.ok };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  async resolveAlert(id: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/incidents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ statut: 'resolu' }),
+      });
+      return { ok: res.ok };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  // ==========================================
+  // PLANIFICATIONS DE VOL (100% MySQL)
+  // ==========================================
+
+  async getFlights(): Promise<FlightRecord[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/planifications-vol`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw = await res.json();
+      return (Array.isArray(raw) ? raw : []).map((f: any) => ({
+        id: String(f.id),
+        date: f.date_heure_depart_prevue || f.created_at || new Date().toISOString(),
+        droneId: String(f.drone_id || '1'),
+        missionName: f.mission?.nom || 'Vol planifié',
+        durationMin: 60,
+        status: f.statut === 'termine' ? 'completed' : (f.statut === 'annule' ? 'aborted' : 'completed'),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getSchedule(): Promise<ScheduledFlight[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/planifications-vol`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw = await res.json();
+      return (Array.isArray(raw) ? raw : []).map((f: any) => ({
+        id: String(f.id),
+        droneId: String(f.drone_id || ''),
+        missionId: String(f.mission_id || ''),
+        departure: f.date_heure_depart_prevue || f.created_at || new Date().toISOString(),
+        modePlan: { initial: 'auto' as const, steps: [] },
+        perimeters: [],
+        status: f.statut === 'en_cours' ? 'running' as const : (f.statut === 'termine' ? 'completed' as const : (f.statut === 'annule' ? 'cancelled' as const : 'planned' as const)),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async createFlight(input: any): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/planifications-vol`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: this.extractErrorMessage(data, `Erreur ${res.status}`) };
+      return { ok: true, data };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  async deleteFlight(id: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/planifications-vol/${id}`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json' },
+      });
+      return { ok: res.ok };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  // ==========================================
+  // ZONES STATIQUES (100% MySQL)
+  // ==========================================
+
+  async getZones(): Promise<SurveillanceZone[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/zones-statiques`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw = await res.json();
+      return this.mapZones(Array.isArray(raw) ? raw : []);
+    } catch {
+      return [];
+    }
+  }
+
+  // ==========================================
+  // COMMANDES OPÉRATIONNELLES DRONES
+  // ==========================================
+
+  async takeOff(droneId: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/drones/${droneId}/demarrer-vol`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, error: data.error || data.message };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  async land(droneId: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/drones/${droneId}/atterrir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, error: data.error || data.message };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  async connectStation(droneId: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/drones/${droneId}/connecter-station`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, error: data.error || data.message };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  // ==========================================
+  // MAPPERS
+  // ==========================================
+
   mapDrones(backendDrones: any[]): Drone[] {
     const statusMap: Record<string, DroneStatus> = {
       'en_vol': 'in-flight',
+      'en_mission': 'in-flight',
       'disponible': 'available',
+      'en_charge': 'available',
+      'en_maintenance': 'maintenance',
       'maintenance': 'maintenance',
       'hors_ligne': 'offline',
     };
@@ -71,7 +448,7 @@ export class BackendService {
       const lng = parseFloat(d.longitude_actuelle) || (-4.0217 + (index * 0.003));
       const alt = parseFloat(d.altitude_actuelle) || 0;
       const spd = parseFloat(d.vitesse_actuelle) || 0;
-      const batt = Math.round(parseFloat(d.niveau_batterie) || 100);
+      const batt = Math.round(parseFloat(d.niveau_batterie) || 0);
 
       const status = statusMap[d.statut] || (alt > 0 ? 'in-flight' : 'available');
       const activeMission = d.missions?.[0];
@@ -88,7 +465,7 @@ export class BackendService {
         altitude: alt,
         speed: spd,
         heading: 45,
-        distanceKm: parseFloat(d.distance_parcourue_km) || (status === 'in-flight' ? 3.4 : 0),
+        distanceKm: parseFloat(d.distance_parcourue_km) || 0,
         maxRangeKm: parseFloat(d.portee_max_km) || 16,
         currentRangeKm: Math.round(((parseFloat(d.portee_max_km) || 16) * (batt / 100)) * 10) / 10,
         flightMode: (status === 'in-flight' ? 'auto' : 'manual') as FlightMode,
@@ -102,6 +479,7 @@ export class BackendService {
       'planifiee': 'planned',
       'terminee': 'completed',
       'annulee': 'cancelled',
+      'suspendue': 'cancelled',
     };
 
     return backendMissions.map((m) => {
@@ -109,7 +487,7 @@ export class BackendService {
       return {
         id: String(m.id),
         name: m.nom,
-        description: m.description || 'Mission de surveillance et détection de pannes agricoles.',
+        description: m.description || '',
         durationMin: m.duree_estimee_minutes || 60,
         status: statusMap[m.statut] || 'planned',
         droneId: assignedDrone ? String(assignedDrone.id) : undefined,
@@ -125,9 +503,7 @@ export class BackendService {
       'faible': 'low',
     };
     const statMap: Record<string, AlertStatus> = {
-      'ouvert': 'new',
       'signale': 'new',
-      'en_analyse': 'in-progress',
       'en_cours': 'in-progress',
       'resolu': 'resolved',
       'clos': 'resolved',
@@ -137,26 +513,33 @@ export class BackendService {
       id: String(a.id),
       timestamp: a.date_incident || a.created_at || new Date().toISOString(),
       droneId: String(a.drone_id || '1'),
-      type: a.type_incident || a.type_alerte || 'Alerte DISDP',
+      type: a.type_incident || 'Alerte DISDP',
       severity: sevMap[a.gravite] || 'medium',
       status: statMap[a.statut] || 'new',
-      details: a.titre ? `${a.titre} - ${a.description || ''}` : (a.description || a.message || ''),
+      details: a.titre ? `${a.titre} - ${a.description || ''}` : (a.description || ''),
     }));
   }
 
   mapZones(backendZones: any[]): SurveillanceZone[] {
     return backendZones.map((z, idx) => {
       let polygon: [number, number][] = [];
-      if (Array.isArray(z.coordonnees_geometrie)) {
-        polygon = z.coordonnees_geometrie;
-      } else if (typeof z.coordonnees_geometrie === 'string') {
-        try {
-          polygon = JSON.parse(z.coordonnees_geometrie);
-        } catch {}
+      const rawGps = z.limites_gps;
+      let coordsObj = rawGps;
+      if (typeof rawGps === 'string') {
+        try { coordsObj = JSON.parse(rawGps); } catch {}
       }
+
+      if (coordsObj && typeof coordsObj === 'object') {
+        if (Array.isArray(coordsObj.coordinates) && Array.isArray(coordsObj.coordinates[0])) {
+          polygon = coordsObj.coordinates[0].map((pt: any) => [Number(pt[1]), Number(pt[0])] as [number, number]);
+        } else if (Array.isArray(coordsObj)) {
+          polygon = coordsObj;
+        }
+      }
+
       if (!polygon.length) {
-        const lat = parseFloat(z.latitude_centre) || 5.3321;
-        const lng = parseFloat(z.longitude_centre) || -4.0217;
+        const lat = parseFloat(z.latitude_centre) || 5.3551;
+        const lng = parseFloat(z.longitude_centre) || -3.8942;
         const offset = 0.0025 * (idx + 1);
         polygon = [
           [lat + offset, lng - offset],
@@ -167,131 +550,11 @@ export class BackendService {
       }
       return {
         id: String(z.id),
-        name: z.nom,
-        color: z.couleur_affichage || (idx % 2 === 0 ? '#20d6a0' : '#1687ff'),
+        name: z.nom_zone || z.nom,
+        color: idx % 2 === 0 ? '#20d6a0' : '#1687ff',
         polygon,
       };
     });
-  }
-
-  // --- Actions opérationnelles vers Laravel ---
-
-  async takeOff(droneId: string): Promise<OpResult> {
-    try {
-      const res = await fetch(`${this.baseUrl}/drones/${droneId}/demarrer-vol`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      });
-      const data = await res.json();
-      return { ok: res.ok, error: data.error || data.message };
-    } catch (err: any) {
-      console.warn('[BackendService] takeOff error:', err);
-      return { ok: false, error: err.message };
-    }
-  }
-
-  async land(droneId: string): Promise<OpResult> {
-    try {
-      const res = await fetch(`${this.baseUrl}/drones/${droneId}/atterrir`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      });
-      const data = await res.json();
-      return { ok: res.ok, error: data.error || data.message };
-    } catch (err: any) {
-      console.warn('[BackendService] land error:', err);
-      return { ok: false, error: err.message };
-    }
-  }
-
-  async connectStation(droneId: string): Promise<OpResult> {
-    try {
-      const res = await fetch(`${this.baseUrl}/drones/${droneId}/connecter-station`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      });
-      const data = await res.json();
-      return { ok: res.ok, error: data.error || data.message };
-    } catch (err: any) {
-      console.warn('[BackendService] connectStation error:', err);
-      return { ok: false, error: err.message };
-    }
-  }
-
-  async createDrone(input: DroneInput): Promise<OpResult> {
-    try {
-      const res = await fetch(`${this.baseUrl}/drones`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          nom: input.name,
-          code_drone: input.code,
-          modele: 'Hexacopter DISDP V3',
-          numero_serie: `SN-${input.code}-${Date.now().toString().slice(-4)}`,
-          statut: input.status === 'in-flight' ? 'en_vol' : 'disponible',
-          niveau_batterie: input.batteryLevel,
-          portee_max_km: 16.0,
-        }),
-      });
-      const data = await res.json();
-      return { ok: res.ok, error: data.error || data.message };
-    } catch (err: any) {
-      console.warn('[BackendService] createDrone error:', err);
-      return { ok: false, error: err.message };
-    }
-  }
-
-  async createMission(input: MissionInput): Promise<OpResult> {
-    try {
-      const res = await fetch(`${this.baseUrl}/missions/creer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          nom: input.name,
-          description: input.description,
-          type_mission: 'surveillance',
-          duree_estimee_minutes: input.durationMin,
-        }),
-      });
-      const data = await res.json();
-      return { ok: res.ok, error: data.error || data.message };
-    } catch (err: any) {
-      console.warn('[BackendService] createMission error:', err);
-      return { ok: false, error: err.message };
-    }
-  }
-
-  async resolveAlert(alertId: string): Promise<OpResult> {
-    try {
-      const res = await fetch(`${this.baseUrl}/alertes/${alertId}/resoudre`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      });
-      const data = await res.json();
-      return { ok: res.ok, error: data.error || data.message };
-    } catch (err: any) {
-      console.warn('[BackendService] resolveAlert error:', err);
-      return { ok: false, error: err.message };
-    }
-  }
-
-  async triggerSound(droneId?: string, sonId: number = 1): Promise<OpResult> {
-    try {
-      const res = await fetch(`${this.baseUrl}/emissions-sonores/declencher`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          drone_id: droneId ? parseInt(droneId, 10) : null,
-          son_id: sonId,
-          volume_pct: 85,
-        }),
-      });
-      const data = await res.json();
-      return { ok: res.ok, error: data.error || data.message };
-    } catch (err: any) {
-      console.warn('[BackendService] triggerSound error:', err);
-      return { ok: false, error: err.message };
-    }
   }
 }
 

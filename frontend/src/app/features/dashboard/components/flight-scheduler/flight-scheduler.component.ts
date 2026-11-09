@@ -26,7 +26,7 @@ import { MissionService } from '../../../../core/services/mission.service';
           @if (!full()) { <a routerLink="/flight-planning" class="btn-pill">Voir tout</a> }
         </div>
       </div>
-      <p class="mb-2 text-[10px] text-[#94A3B8]">Démo : les programmations sont exécutées par la simulation, aucun ordre n'est envoyé aux drones.</p>
+      <p class="mb-2 text-[10px] text-[#94A3B8]">Planifications enregistrées en base de données MySQL.</p>
 
       @if (full()) {
         <div class="mb-2.5">
@@ -45,21 +45,25 @@ import { MissionService } from '../../../../core/services/mission.service';
         <table class="tbl">
           <thead><tr><th>Drone</th><th>Mission</th><th>Départ</th><th>Modes de vol</th><th>Périmètre</th><th>Statut</th><th><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
-            @for (s of rows(); track s.id) {
-              <tr>
-                <td class="font-bold text-[#F8FAFC]">{{ drones.nameOf(s.droneId) }}</td>
-                <td class="text-[#94A3B8] font-medium">{{ missionName(s) }}</td>
-                <td class="text-[#94A3B8]">{{ fmt(s.departure) }}</td>
-                <td class="text-[#94A3B8]">{{ describe(s.modePlan) }}</td>
-                <td class="text-[#94A3B8]">{{ s.perimeters.length ? (s.perimeters.length + ' périmètre(s)') : '—' }}</td>
-                <td><app-status-badge [tone]="st[s.status].tone">{{ st[s.status].label }}</app-status-badge></td>
-                <td class="text-right">
-                  <button type="button" class="icon-btn" aria-label="Détails" (click)="details.schedule(s)"><app-icon name="eye" [size]="13" /></button>
-                  <button type="button" class="icon-btn hover:!text-[#F87171]" aria-label="Annuler" (click)="remove(s.id)"><app-icon name="trash" [size]="13" /></button>
-                </td>
-              </tr>
-            } @empty {
-              <tr><td colspan="7" class="py-4 text-center text-[#94A3B8]">Aucun vol programmé.</td></tr>
+            @if (flights.loading()) {
+              <tr><td colspan="7" class="py-6 text-center text-[#38BDF8] animate-pulse">Chargement des programmations...</td></tr>
+            } @else {
+              @for (s of rows(); track s.id) {
+                <tr>
+                  <td class="font-bold text-[#F8FAFC]">{{ drones.nameOf(s.droneId) }}</td>
+                  <td class="text-[#94A3B8] font-medium">{{ missionName(s) }}</td>
+                  <td class="text-[#94A3B8]">{{ fmt(s.departure) }}</td>
+                  <td class="text-[#94A3B8]">{{ describe(s.modePlan) }}</td>
+                  <td class="text-[#94A3B8]">{{ s.perimeters.length ? (s.perimeters.length + ' périmètre(s)') : '—' }}</td>
+                  <td><app-status-badge [tone]="st[s.status].tone">{{ st[s.status].label }}</app-status-badge></td>
+                  <td class="text-right">
+                    <button type="button" class="icon-btn" aria-label="Détails" (click)="details.schedule(s)"><app-icon name="eye" [size]="13" /></button>
+                    <button type="button" class="icon-btn hover:!text-[#F87171]" aria-label="Annuler" (click)="remove(s.id)"><app-icon name="trash" [size]="13" /></button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="py-6 text-center text-[#94A3B8]">Aucun vol planifié en base de données.</td></tr>
+              }
             }
           </tbody>
         </table>
@@ -68,7 +72,7 @@ import { MissionService } from '../../../../core/services/mission.service';
   `,
 })
 export class FlightSchedulerComponent {
-  private readonly flights = inject(FlightService);
+  protected readonly flights = inject(FlightService);
   protected readonly drones = inject(DroneService);
   private readonly missions = inject(MissionService);
   protected readonly details = inject(DetailService);

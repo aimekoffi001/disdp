@@ -44,10 +44,12 @@ export interface Mission {
   /** Drone affecté : renseigné au démarrage du vol (planification), pas à la création. */
   droneId?: string;
 }
+
 export interface MissionInput {
   name: string;
   description: string;
   durationMin: number;
+  droneId?: string;
 }
 
 export interface SurveillanceZone {
@@ -192,4 +194,5 @@ export interface AppNotification {
 export interface OpResult {
   ok: boolean;
   error?: string;
+  data?: any;
 }

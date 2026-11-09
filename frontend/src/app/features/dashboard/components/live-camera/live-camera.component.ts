@@ -22,7 +22,7 @@ import { IconComponent } from '../../../../shared/components/icon/icon.component
       <div class="panel-title flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center gap-2 min-w-0">
           <app-icon name="video" [size]="15" class="text-[#38BDF8] shrink-0" />
-          <span class="truncate text-[#F8FAFC] font-semibold">Caméra du Drone — {{ drone().name }}</span>
+          <span class="truncate text-[#F8FAFC] font-semibold">Caméra du Drone — {{ drone()?.name ?? 'Aucun drone' }}</span>
           <span class="rounded-full bg-[#10B981]/15 px-2 py-0.5 text-[10px] font-semibold text-[#34D399] border border-[#10B981]/30 flex items-center gap-1.5 shadow-xs">
             <span class="size-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
             Capteur Optique 4K
@@ -97,7 +97,7 @@ import { IconComponent } from '../../../../shared/components/icon/icon.component
           <span class="flex items-center gap-1 rounded-md border border-[#1E3A5F] bg-[#0C1E3D] px-2 py-0.5">
             <app-icon name="battery" [size]="11" class="text-[#34D399]" />
             <span>Batterie :</span>
-            <span class="font-bold text-[#34D399] tabular-nums">{{ drone().batteryLevel.toFixed(0) }}%</span>
+            <span class="font-bold text-[#34D399] tabular-nums">{{ (drone()?.batteryLevel ?? 0).toFixed(0) }}%</span>
           </span>
           <span class="hidden sm:flex items-center gap-1 rounded-md border border-[#1E3A5F] bg-[#0C1E3D] px-2 py-0.5">
             <app-icon name="radio" [size]="11" class="text-[#38BDF8]" />

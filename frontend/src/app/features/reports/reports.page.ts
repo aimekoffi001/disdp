@@ -11,7 +11,7 @@ import { fmtDateTime } from '../../shared/utils/labels';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto flex max-w-[900px] flex-col gap-3">
-      <app-page-header title="Rapports" subtitle="Exports de données de démonstration" />
+      <app-page-header title="Rapports" subtitle="Exports des données réelles de la flotte (CSV)" />
       <section class="panel">
         <div class="panel-title">Génération de rapports</div>
         <p class="text-xs text-[#94A3B8]">Les rapports mis en forme (PDF, graphiques) ne sont pas encore développés. En attendant, vous pouvez exporter les données en CSV.</p>

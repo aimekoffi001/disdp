@@ -13,12 +13,12 @@ import {
 } from '@angular/core';
 import * as L from 'leaflet';
 import { APP_SETTINGS } from '../../../../core/config/app-settings';
-import { MOCK_ZONES } from '../../../../core/data/mock-data';
 import { Drone, LatLng, SurveillanceZone } from '../../../../core/models/models';
 import { DetailService } from '../../../../core/services/detail.service';
 import { DroneService } from '../../../../core/services/drone.service';
 import { FlightControlService } from '../../../../core/services/flight-control.service';
 import { FlightService } from '../../../../core/services/flight.service';
+import { ZoneService } from '../../../../core/services/zone.service';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { DRONE_STATUS, FLIGHT_MODE } from '../../../../shared/utils/labels';
 
@@ -64,11 +64,11 @@ const MAX_TRAIL = 120;
             <app-icon name="route" [size]="12" class="text-[#38BDF8]" />
             Survol en temps réel :
           </span>
-          @for (z of zones; track z.id) {
+          @for (z of zones(); track z.id) {
             <button type="button" 
                     (click)="selectZone(z)"
                     [class]="'rounded-lg px-2.5 py-1 text-[11px] font-semibold border transition cursor-pointer ' + 
-                            (selectedDrone().assignedZoneName === z.name 
+                            (selectedDrone()?.assignedZoneName === z.name 
                               ? 'border-[#38BDF8] bg-[#172A4D] text-[#38BDF8] shadow-sm' 
                               : 'border-[#1E3A5F] bg-[#112240] text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#172A4D]')">
               📍 {{ z.name }}
@@ -176,7 +176,8 @@ export class DroneMapComponent {
   readonly height = input<number | null>(null);
   readonly controls = input(false);
 
-  protected readonly zones = MOCK_ZONES;
+  private readonly zoneService = inject(ZoneService);
+  protected readonly zones = this.zoneService.zones;
   protected readonly selectedDrone = computed(() => this.drones.selected());
   protected readonly drawingPerimeter = signal<boolean>(false);
   protected readonly draftPoints = signal<LatLng[]>([]);
@@ -212,6 +213,12 @@ export class DroneMapComponent {
       if (!this.map) return;
       this.updateMarkers(list, sel);
       this.updated.set(new Date().toTimeString().slice(0, 8));
+    });
+
+    effect(() => {
+      this.zones();
+      if (!this.map) return;
+      this.drawZones();
     });
 
     inject(DestroyRef).onDestroy(() => {
@@ -357,7 +364,12 @@ export class DroneMapComponent {
 
   private drawZones(): void {
     if (!this.map) return;
-    for (const z of MOCK_ZONES) {
+    for (const poly of this.zonePolygons.values()) {
+      poly.remove();
+    }
+    this.zonePolygons.clear();
+
+    for (const z of this.zones()) {
       const poly = L.polygon(z.polygon, {
         color: z.color,
         fillColor: z.color,
