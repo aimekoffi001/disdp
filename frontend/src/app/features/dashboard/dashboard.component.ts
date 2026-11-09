@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map, timer } from 'rxjs';
 import { UiService } from '../../core/services/ui.service';
 import { IconComponent, IconName } from '../../shared/components/icon/icon.component';
-import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { AlertsTableComponent } from './components/alerts-table/alerts-table.component';
 import { BatteryPanelComponent } from './components/battery-panel/battery-panel.component';
 import { DroneControlComponent } from './components/drone-control/drone-control.component';
@@ -15,34 +16,51 @@ import { MotorsPanelComponent } from './components/motors-panel/motors-panel.com
 import { SensorsPanelComponent } from './components/sensors-panel/sensors-panel.component';
 import { StatisticsComponent } from './components/statistics/statistics.component';
 
+const dateFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const timeFmt = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
 type Tab = 'live' | 'telemetry' | 'map' | 'activity';
 
 @Component({
   selector: 'app-dashboard',
   imports: [
-    IconComponent, PageHeaderComponent, DroneControlComponent, StatisticsComponent, LiveCameraComponent, BatteryPanelComponent,
+    IconComponent, DroneControlComponent, StatisticsComponent, LiveCameraComponent, BatteryPanelComponent,
     MotorsPanelComponent, FlightDataComponent, SensorsPanelComponent, MissionsTableComponent, AlertsTableComponent,
     FlightHistoryComponent, DroneMapComponent, FlightSchedulerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto flex max-w-[1500px] flex-col gap-4">
-      <app-page-header title="Tableau de bord" subtitle="Vue d'ensemble de la flotte et du drone sélectionné">
-        <app-drone-control />
-      </app-page-header>
+      <!-- Barre d'actions & Contrôle du drone sélectionné -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <app-drone-control class="w-full sm:w-auto" />
+        <div class="hidden sm:flex items-center gap-2 rounded-xl border border-[#1E3A5F] bg-[#112240] px-3.5 py-2 text-[11px] text-[#94A3B8] shadow-sm ml-auto">
+          <app-icon name="calendar" [size]="13" class="text-[#38BDF8]" />
+          <span>{{ date() }}</span>
+          <span class="text-[#1E3A5F]">·</span>
+          <app-icon name="clock" [size]="13" class="text-[#38BDF8]" />
+          <span class="font-semibold text-[#F8FAFC] tabular-nums">{{ time() }}</span>
+        </div>
+      </div>
 
       <!-- Cartes statistiques en Bleu Marine avec bordure #1E3A5F -->
       <app-statistics />
 
-      <!-- Onglets Style BLEU MARINE PRO : Sobre, fond navy, accent bleu #38BDF8 -->
-      <div class="flex w-full sm:w-auto gap-1.5 self-start overflow-x-auto no-scrollbar rounded-[12px] border border-[#1E3A5F] bg-[#112240] p-1.5 shadow-md" role="tablist" aria-label="Sections du tableau de bord">
-        @for (t of tabs; track t.id) {
-          <button
-            type="button" role="tab" [attr.aria-selected]="ui.dashboardTab() === t.id" (click)="ui.dashboardTab.set(t.id)"
-            [class]="'flex flex-1 sm:flex-initial items-center justify-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold whitespace-nowrap transition cursor-pointer ' + (ui.dashboardTab() === t.id ? 'bg-[#172A4D] text-[#38BDF8] border border-[#1E3A5F]' : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#172A4D]')">
-            <app-icon [name]="t.icon" [size]="14" /><span>{{ t.label }}</span>
-          </button>
-        }
+      <!-- Barre d'onglets parfaitement alignée -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1E3A5F]/70 pb-2">
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:inline-flex items-center gap-1.5 rounded-xl border border-[#1E3A5F] bg-[#112240] p-1.5 shadow-sm" role="tablist" aria-label="Sections du tableau de bord">
+          @for (t of tabs; track t.id) {
+            <button
+              type="button" role="tab" [attr.aria-selected]="ui.dashboardTab() === t.id" (click)="ui.dashboardTab.set(t.id)"
+              [class]="'flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold whitespace-nowrap transition cursor-pointer ' + (ui.dashboardTab() === t.id ? 'bg-[#172A4D] text-[#38BDF8] border border-[#1E3A5F] shadow-xs' : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#172A4D]')">
+              <app-icon [name]="t.icon" [size]="14" /><span>{{ t.label }}</span>
+            </button>
+          }
+        </div>
+        <div class="hidden md:flex items-center gap-2 text-[11px] text-[#94A3B8]">
+          <span class="size-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
+          <span>Cockpit opérationnel · Données en temps réel</span>
+        </div>
       </div>
 
       @switch (ui.dashboardTab()) {
@@ -73,6 +91,13 @@ type Tab = 'live' | 'telemetry' | 'map' | 'activity';
 })
 export class DashboardComponent {
   protected readonly ui = inject(UiService);
+  private readonly now = toSignal(timer(0, 1000).pipe(map(() => new Date())), { initialValue: new Date() });
+  protected readonly date = computed(() => {
+    const s = dateFmt.format(this.now());
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  });
+  protected readonly time = computed(() => timeFmt.format(this.now()));
+
   protected readonly tabs: { id: Tab; label: string; icon: IconName }[] = [
     { id: 'live', label: 'Direct & Caméra', icon: 'video' },
     { id: 'telemetry', label: 'Télémétrie complète', icon: 'activity' },
