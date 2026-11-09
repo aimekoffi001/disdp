@@ -134,13 +134,13 @@ export class FlightDataComponent {
         icon: 'gauge',
         label: 'Vitesse de vol',
         value: `${fr(d.speed)} m/s`,
-        detail: `Équivalent à ${fr(d.speed * 3.6, 0)} km/h`,
+        detail: `Équivalent à ${fr(d.speed * 3.6, 0)} km/h · +${Math.round(d.speed)} m/s`,
       },
       {
         icon: 'route',
         label: 'Distance parcourue',
-        value: `${fr(d.distanceKm, 2)} km`,
-        detail: 'Cumulée depuis le décollage',
+        value: d.distanceKm >= 1 ? `${fr(d.distanceKm, 2)} km` : `${Math.round(d.distanceKm * 1000)} m (${fr(d.distanceKm, 3)} km)`,
+        detail: `Progression en direct (+${Math.round(d.speed)} m chaque seconde)`,
       },
       {
         icon: 'radio',

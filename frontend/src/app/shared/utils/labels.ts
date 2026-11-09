@@ -1,4 +1,4 @@
-import { AlertSeverity, AlertStatus, DroneStatus, MissionStatus, ScheduleStatus } from '../../core/models/models';
+import { AlertSeverity, AlertStatus, DroneStatus, FlightMode, MissionStatus, ModePlan, ScheduleStatus } from '../../core/models/models';
 
 export type Tone = 'green' | 'blue' | 'red' | 'amber' | 'gray' | 'violet';
 
@@ -60,7 +60,16 @@ export function batteryTone(level: number): Tone {
   return level >= 50 ? 'green' : level >= 25 ? 'amber' : 'red';
 }
 
-import { FlightMode, ModePlan } from '../../core/models/models';
+/** Formate la distance : en mètres (< 1 km) ou en kilomètres (>= 1 km) */
+export function fmtDistance(km: number | undefined | null): string {
+  if (km === undefined || km === null || isNaN(km)) return '0 m';
+  const meters = Math.round(km * 1000);
+  if (meters < 1000) {
+    return `${meters} m`;
+  }
+  return `${km.toFixed(2).replace('.', ',')} km`;
+}
+
 export const FLIGHT_MODE: Record<FlightMode, { label: string; tone: Tone }> = {
   manual: { label: 'Manuel', tone: 'amber' },
   'semi-auto': { label: 'Semi-automatique', tone: 'blue' },

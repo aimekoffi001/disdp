@@ -7,7 +7,7 @@ import { MissionService } from '../../../../core/services/mission.service';
 import { UiService } from '../../../../core/services/ui.service';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
-import { DRONE_STATUS } from '../../../../shared/utils/labels';
+import { DRONE_STATUS, fmtDistance } from '../../../../shared/utils/labels';
 
 @Component({
   selector: 'app-drones-table',
@@ -51,7 +51,7 @@ import { DRONE_STATUS } from '../../../../shared/utils/labels';
       } @else {
         <div class="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
           <table class="tbl">
-            <thead><tr><th>Nom</th><th>Code</th><th>Statut</th><th>Batterie</th><th>Mission</th><th><span class="sr-only">Actions</span></th></tr></thead>
+            <thead><tr><th>Nom</th><th>Code</th><th>Statut</th><th>Batterie</th><th>Vitesse & Distance</th><th>Mission</th><th><span class="sr-only">Actions</span></th></tr></thead>
             <tbody>
               @for (d of rows(); track d.id) {
                 <tr class="cursor-pointer" [class]="d.id === drones.selectedId() ? 'bg-[#172A4D]' : ''" (click)="drones.select(d.id)">
@@ -63,6 +63,16 @@ import { DRONE_STATUS } from '../../../../shared/utils/labels';
                       {{ round(d.batteryLevel) }}%
                     </span>
                   </td>
+                  <td>
+                    @if (d.status === 'in-flight') {
+                      <div class="leading-tight">
+                        <span class="font-bold text-[#38BDF8] tabular-nums text-xs">{{ d.speed.toFixed(1) }} m/s</span>
+                        <div class="text-[10px] font-semibold text-[#34D399] tabular-nums">{{ fmtDist(d.distanceKm) }} (+{{ Math.round(d.speed) }}m/s)</div>
+                      </div>
+                    } @else {
+                      <span class="text-[#94A3B8] text-[11px] tabular-nums">{{ fmtDist(d.distanceKm) }}</span>
+                    }
+                  </td>
                   <td class="text-[#94A3B8] font-medium">{{ missionOf(d) }}</td>
                   <td class="text-right">
                     <button type="button" class="icon-btn" aria-label="Voir la fiche" (click)="$event.stopPropagation(); details.drone(d)"><app-icon name="eye" [size]="13" /></button>
@@ -72,7 +82,7 @@ import { DRONE_STATUS } from '../../../../shared/utils/labels';
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="6" class="py-8 text-center text-[#94A3B8]">
+                  <td colspan="7" class="py-8 text-center text-[#94A3B8]">
                     @if (term() || status()) {
                       Aucun drone ne correspond aux critères.
                     } @else {
@@ -99,6 +109,8 @@ export class DronesTableComponent {
   protected readonly status = signal<DroneStatus | ''>('');
   protected readonly meta = DRONE_STATUS;
   protected readonly round = Math.round;
+  protected readonly Math = Math;
+  protected readonly fmtDist = fmtDistance;
 
   protected readonly statuses = (Object.keys(DRONE_STATUS) as DroneStatus[]).map((value) => ({
     value,

@@ -253,8 +253,9 @@ export class TelemetryService {
     // Consommation énergétique réaliste en vol selon l'effort moteur et la vitesse
     const batteryDrain = (0.035 + (speed / 20) * 0.02) * dt;
     const batteryLevel = Math.max(0, Math.round((d.batteryLevel - batteryDrain) * 100) / 100);
-    const addedKm = (speed * dt * 1.8) / 1000;
-    const distanceKm = Math.round((d.distanceKm + addedKm) * 1000) / 1000;
+    // Distance parcourue cumulée en temps réel : Delta d = vitesse (m/s) * dt (s)
+    const addedKm = (speed * dt) / 1000;
+    const distanceKm = Math.round((d.distanceKm + addedKm) * 10000) / 10000;
     const nominalRange = d.maxRangeKm ?? APP_SETTINGS.maxRangeKm;
     const currentRangeKm = Math.max(0.5, Math.round(((nominalRange * (batteryLevel / 100)) + jitter(0.08)) * 10) / 10);
 

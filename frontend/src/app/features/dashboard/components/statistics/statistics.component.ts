@@ -13,7 +13,7 @@ const signed = (n: number, unit: string, digits = 0) => `${n >= 0 ? '↑ +' : '�
   template: `
     <div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       <app-stat-card icon="battery" accent="green" label="Batterie moyenne" [value]="battery()" unit="%" [trend]="batteryTrend()" [progress]="batteryPct()" />
-      <app-stat-card icon="route" accent="blue" label="Distance parcourue" [value]="distance()" unit="km" [trend]="distanceTrend()" [progress]="distancePct()" />
+      <app-stat-card icon="route" accent="blue" label="Distance parcourue" [value]="distance()" [unit]="distanceUnit()" [trend]="distanceTrend()" [progress]="distancePct()" />
       <app-stat-card icon="gauge" accent="violet" label="Vitesse moyenne" [value]="speed()" unit="m/s" [trend]="speedTrend()" [progress]="speedPct()" />
       <app-stat-card icon="radio" accent="cyan" label="Portée maximale" [value]="maxRange()" unit="km" [trend]="maxRangeTrend()" [progress]="maxRangePct()" />
     </div>
@@ -24,7 +24,11 @@ export class StatisticsComponent {
   protected readonly battery = computed(() => fr1(this.drones.averageBattery()));
   protected readonly batteryPct = computed(() => Math.round(this.drones.averageBattery()));
   
-  protected readonly distance = computed(() => fr2(this.drones.totalDistanceKm()));
+  protected readonly distance = computed(() => {
+    const tot = this.drones.totalDistanceKm();
+    return tot >= 1 ? fr2(tot) : Math.round(tot * 1000).toString();
+  });
+  protected readonly distanceUnit = computed(() => (this.drones.totalDistanceKm() >= 1 ? 'km' : 'm'));
   protected readonly distancePct = computed(() => Math.min(100, Math.max(5, Math.round((this.drones.totalDistanceKm() / 15) * 100))));
   
   protected readonly speed = computed(() => fr1(this.drones.averageSpeed()));
@@ -38,7 +42,10 @@ export class StatisticsComponent {
 
   // Tendances calculées automatiquement en temps réel
   protected readonly batteryTrend = computed(() => signed(this.drones.averageBattery() - this.drones.previous.battery, '%'));
-  protected readonly distanceTrend = computed(() => signed(this.drones.totalDistanceKm() - this.drones.previous.distanceKm, ' km', 1));
+  protected readonly distanceTrend = computed(() => {
+    const spd = this.drones.averageSpeed();
+    return spd > 0 ? `+${spd.toFixed(1)} m/s direct` : 'Stationnaire';
+  });
   protected readonly speedTrend = computed(() => {
     const prev = this.drones.previous.speed;
     return signed(((this.drones.averageSpeed() - prev) / (prev || 1)) * 100, '%');

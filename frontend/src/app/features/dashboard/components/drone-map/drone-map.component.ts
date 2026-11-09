@@ -20,7 +20,7 @@ import { FlightControlService } from '../../../../core/services/flight-control.s
 import { FlightService } from '../../../../core/services/flight.service';
 import { ZoneService } from '../../../../core/services/zone.service';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
-import { DRONE_STATUS, FLIGHT_MODE } from '../../../../shared/utils/labels';
+import { DRONE_STATUS, FLIGHT_MODE, fmtDistance } from '../../../../shared/utils/labels';
 
 export const DRONE_COLORS = ['#38BDF8', '#34D399', '#F59E0B', '#818CF8', '#F87171', '#94A3B8'];
 const MAX_TRAIL = 120;
@@ -38,6 +38,16 @@ const MAX_TRAIL = 120;
           <span class="flex items-center gap-1.5 rounded-full border border-[#10B981]/30 bg-[#10B981]/15 px-2 py-0.5 text-[9px] font-semibold tracking-normal text-[#34D399] normal-case shadow-xs">
             <span class="size-1.5 rounded-full bg-[#10B981] animate-pulse"></span><span class="hidden sm:inline">Temps réel · </span>{{ updated() }}
           </span>
+          @if (selectedDrone(); as sel) {
+            @if (sel.status === 'in-flight') {
+              <span class="hidden md:inline-flex items-center gap-1.5 rounded-full border border-[#38BDF8]/40 bg-[#0C1E3D] px-2.5 py-0.5 text-[10px] font-semibold text-[#38BDF8]">
+                <span>{{ sel.speed.toFixed(1) }} m/s</span>
+                <span class="text-[#94A3B8]">·</span>
+                <span class="text-[#34D399]">Dist: {{ fmtDist(sel.distanceKm) }}</span>
+                <span class="text-[#38BDF8] text-[9px]">(+{{ Math.round(sel.speed) }} m/s)</span>
+              </span>
+            }
+          }
         </div>
         @if (controls()) {
           <span class="flex flex-wrap gap-1.5 ml-auto sm:ml-0">
@@ -157,7 +167,7 @@ const MAX_TRAIL = 120;
               }
             </div>
             <div class="text-[#94A3B8] tabular-nums mt-0.5">
-              Vit: <b class="text-[#F8FAFC]">{{ s.speed.toFixed(1) }} m/s</b> · Cap: <b class="text-[#F8FAFC]">{{ Math.round(s.heading) }}°</b> · Batt: <b class="text-[#34D399]">{{ s.batteryLevel.toFixed(0) }}%</b>
+              Vit: <b class="text-[#F8FAFC]">{{ s.speed.toFixed(1) }} m/s</b> · Dist: <b class="text-[#34D399]">{{ fmtDist(s.distanceKm) }}</b> · Cap: <b class="text-[#F8FAFC]">{{ Math.round(s.heading) }}°</b> · Batt: <b class="text-[#34D399]">{{ s.batteryLevel.toFixed(0) }}%</b>
             </div>
             <button type="button" class="mt-1 font-semibold text-[#38BDF8] hover:underline" (click)="details.drone(s)">Fiche détaillée du drone</button>
           </div>
@@ -169,6 +179,7 @@ const MAX_TRAIL = 120;
 })
 export class DroneMapComponent {
   protected readonly Math = Math;
+  protected readonly fmtDist = fmtDistance;
   protected readonly drones = inject(DroneService);
   private readonly flights = inject(FlightService);
   private readonly control = inject(FlightControlService);
@@ -479,9 +490,12 @@ export class DroneMapComponent {
         marker.setZIndexOffset(isSelected ? 1000 : 100);
       }
 
+      const distStr = d.distanceKm >= 1 ? `${d.distanceKm.toFixed(2)} km` : `${Math.round(d.distanceKm * 1000)} m`;
       marker.bindTooltip(
         `<b>${d.name}</b> (${d.code})<br>` +
-        `Vit: <b>${d.speed.toFixed(1)} m/s</b> · Cap: <b>${Math.round(d.heading)}°</b><br>` +
+        `Vit: <b>${d.speed.toFixed(1)} m/s</b> (${(d.speed * 3.6).toFixed(0)} km/h)<br>` +
+        `Dist: <b style="color:#34D399;">${distStr}</b> (+${Math.round(d.speed)} m/s)<br>` +
+        `Alt: <b>${d.altitude.toFixed(0)} m</b> · Cap: <b>${Math.round(d.heading)}°</b><br>` +
         (d.assignedZoneName ? `<span style="color:#34D399;font-weight:bold;">📍 Zone de survol : ${d.assignedZoneName}</span><br>` : '') +
         (d.rthActive ? `<span style="color:#F59E0B;font-weight:bold;">⚡ RTH Sécurisé : Palier ${d.rthAltitude}m (Slot #${d.rthSlot})</span>` : `Batt: ${d.batteryLevel.toFixed(0)}%`),
         { direction: 'top' },

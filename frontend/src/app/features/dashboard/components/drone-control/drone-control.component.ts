@@ -5,7 +5,7 @@ import { FlightControlService } from '../../../../core/services/flight-control.s
 import { UiService } from '../../../../core/services/ui.service';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
-import { DRONE_STATUS, FLIGHT_MODE } from '../../../../shared/utils/labels';
+import { DRONE_STATUS, FLIGHT_MODE, fmtDistance } from '../../../../shared/utils/labels';
 
 /** Contrôle opérationnel du drone sélectionné style BLEU MARINE PRO. */
 @Component({
@@ -42,6 +42,15 @@ import { DRONE_STATUS, FLIGHT_MODE } from '../../../../shared/utils/labels';
                 <span class="text-[9px] font-normal text-[#94A3B8]">m/s</span>
                 <span class="hidden md:inline text-[9px] text-[#64748B]">({{ (d.speed * 3.6).toFixed(0) }} km/h)</span>
               </span>
+
+              <!-- Compteur de Distance en Temps Réel lié à la vitesse -->
+              <div class="flex items-center gap-1.5 border-l border-[#1E3A5F] pl-2 tabular-nums" title="Distance cumulée en direct selon la vitesse de vol">
+                <app-icon name="route" [size]="13" class="text-[#34D399]" />
+                <span class="text-[11px] font-bold text-[#34D399]">{{ fmtDist(d.distanceKm) }}</span>
+                <span class="text-[9px] font-semibold text-[#38BDF8] hidden xs:inline" title="Incrément de distance chaque seconde">
+                  (+{{ Math.round(d.speed) }} m/s)
+                </span>
+              </div>
 
               <!-- Boutons Pas-à-Pas Diminuer / Accélérer -->
               <div class="flex items-center gap-0.5 border-l border-[#1E3A5F] pl-1.5">
@@ -119,6 +128,8 @@ export class DroneControlComponent {
   protected readonly drone = this.drones.selected;
   protected readonly meta = DRONE_STATUS;
   protected readonly round = Math.round;
+  protected readonly Math = Math;
+  protected readonly fmtDist = fmtDistance;
   protected readonly takeoffSpeed = signal<number>(12);
   protected readonly modes = (Object.keys(FLIGHT_MODE) as FlightMode[]).map((value) => ({ value, label: FLIGHT_MODE[value].label }));
 
