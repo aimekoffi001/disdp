@@ -7,6 +7,7 @@ import { DroneService } from './drone.service';
 import { FlightService } from './flight.service';
 import { MissionService } from './mission.service';
 import { NotificationService } from './notification.service';
+import { TelemetryService } from './telemetry.service';
 import { FLIGHT_MODE } from '../../shared/utils/labels';
 
 const MIN_TAKEOFF_BATTERY = 20;
@@ -22,6 +23,7 @@ export class FlightControlService {
   private readonly notifications = inject(NotificationService);
   private readonly alerts = inject(AlertService);
   private readonly backend = inject(BackendService);
+  private readonly telemetry = inject(TelemetryService);
 
   /** Accélération du temps pour l'exécution des vols programmés (démo : ×60 = 1 min simulée par seconde). */
   readonly timeScale = signal(1);
@@ -42,6 +44,9 @@ export class FlightControlService {
     const speed = Math.max(2, Math.min(35, initialSpeed));
     this.drones.patch(droneId, { status: 'in-flight', speed, targetSpeed: speed, altitude: 15, flightMode: mode });
     this.notifications.success(`${d.name} mis en marche : décollage à ${speed.toFixed(1)} m/s (${Math.round(speed * 3.6)} km/h).`);
+
+    // Démarrage immédiat de la boucle de télémétrie temps réel
+    this.telemetry.start();
 
     // Synchronisation backend Laravel & BDD MySQL
     this.backend.takeOff(droneId);

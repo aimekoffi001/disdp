@@ -5,8 +5,8 @@
 export const APP_SETTINGS = {
   /** Mode réel connecté (aucune donnée fictive ni démo) */
   demoMode: false,
-  /** Intervalle de rafraîchissement télémétrie en direct (ms) */
-  telemetryIntervalMs: 2000,
+  /** Intervalle de rafraîchissement télémétrie en direct (ms) : 1 Hz temps réel fluide */
+  telemetryIntervalMs: 1000,
   /** Position de référence GPS */
   baseLat: 5.3321,
   baseLng: -4.0217,

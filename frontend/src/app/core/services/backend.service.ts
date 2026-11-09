@@ -168,6 +168,45 @@ export class BackendService {
     }
   }
 
+  /** Synchronisation périodique de la télémétrie du drone en vol avec MySQL */
+  async syncTelemetry(id: string, telemetry: {
+    speed?: number;
+    altitude?: number;
+    latitude?: number;
+    longitude?: number;
+    batteryLevel?: number;
+  }): Promise<void> {
+    try {
+      const payload: Record<string, any> = {};
+      if (telemetry.speed !== undefined) payload['vitesse_actuelle'] = Number(telemetry.speed.toFixed(1));
+      if (telemetry.altitude !== undefined) payload['altitude_actuelle'] = Number(telemetry.altitude.toFixed(1));
+      if (telemetry.latitude !== undefined) payload['latitude_actuelle'] = Number(telemetry.latitude.toFixed(6));
+      if (telemetry.longitude !== undefined) payload['longitude_actuelle'] = Number(telemetry.longitude.toFixed(6));
+      if (telemetry.batteryLevel !== undefined) payload['niveau_batterie'] = Number(telemetry.batteryLevel.toFixed(1));
+
+      await fetch(`${this.baseUrl}/api/drones/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // Synchronisation en arrière-plan sans blocage UI
+    }
+  }
+
+  /** Synchronisation de la dernière valeur d'un capteur avec MySQL */
+  async syncCapteurValue(capteurId: number | string, valeur: number): Promise<void> {
+    try {
+      await fetch(`${this.baseUrl}/api/capteurs/${capteurId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ derniere_valeur: Number(valeur.toFixed(2)) }),
+      });
+    } catch {
+      // Synchronisation en arrière-plan
+    }
+  }
+
   async deleteDrone(id: string): Promise<OpResult> {
     try {
       const res = await fetch(`${this.baseUrl}/api/drones/${id}`, {
