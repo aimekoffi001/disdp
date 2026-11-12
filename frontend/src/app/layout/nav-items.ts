@@ -4,13 +4,14 @@ export interface NavItem { label: string; path: string; icon: IconName; badge?: 
 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Tableau de bord', path: '/dashboard', icon: 'dashboard' },
-  { label: 'Drones', path: '/drones', icon: 'drone' },
+  { label: 'Gestion des drones', path: '/drones', icon: 'drone' },
   { label: 'Pilotage', path: '/pilotage', icon: 'gamepad' },
-  { label: 'Missions', path: '/missions', icon: 'missions' },
-  { label: 'Zones', path: '/surveillance-zones', icon: 'shield' },
-  { label: 'Planification', path: '/flight-planning', icon: 'schedule' },
-  { label: 'Caméras', path: '/cameras', icon: 'video' },
-  { label: 'Alertes', path: '/alerts', icon: 'bell', badge: true },
-  { label: 'Rapports', path: '/reports', icon: 'file' },
+  { label: 'Planification des vols', path: '/flight-planning', icon: 'schedule' },
+  { label: 'Surveillance en direct', path: '/cameras', icon: 'camera' },
+  { label: 'Capteurs et télémétrie', path: '/dashboard', icon: 'gauge' },
+  { label: 'Détection des pannes', path: '/alerts', icon: 'alert' },
+  { label: 'Alertes et incidents', path: '/alerts', icon: 'bell', badge: true },
+  { label: 'Inspections techniques', path: '/reports', icon: 'missions' },
+  { label: 'Historique et rapports', path: '/reports', icon: 'file' },
   { label: 'Paramètres', path: '/settings', icon: 'settings' },
 ];
