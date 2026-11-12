@@ -30,7 +30,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <div>
             <div class="flex flex-wrap items-center gap-2">
               <span class="text-base font-black tracking-wide text-white">Pilotage Tactique</span>
-              @if (motorsRunning()) {
+              @if (isFlying() || isRealtimeRunning()) {
                 <span class="inline-flex items-center gap-1.5 rounded-full border border-[#10B981]/50 bg-[#10B981]/20 px-2.5 py-0.5 text-[10px] font-black text-[#34D399]">
                   <span class="size-2 rounded-full bg-[#10B981] animate-ping"></span>
                   EN MARCHE EN TEMPS RÉEL (1 Hz)
@@ -82,54 +82,54 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             type="button"
             (click)="toggleRealtimeRun()"
             [class]="'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black shadow-lg transition-all active:scale-95 cursor-pointer ' +
-                     (motorsRunning()
+                     (isFlying() || isRealtimeRunning()
                        ? 'border border-[#EF4444]/60 bg-gradient-to-r from-[#EF4444] to-[#DC2626] text-white shadow-[#EF4444]/30 hover:brightness-110'
                        : 'border border-[#10B981]/60 bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-[#10B981]/30 hover:brightness-110')">
-            <app-icon [name]="motorsRunning() ? 'pause' : 'play'" [size]="15" />
-            <span>{{ motorsRunning() ? 'Arrêter la mise en marche' : 'Mettre en marche en temps réel' }}</span>
+            <app-icon [name]="(isFlying() || isRealtimeRunning()) ? 'pause' : 'play'" [size]="15" />
+            <span>{{ (isFlying() || isRealtimeRunning()) ? 'Arrêter la mise en marche' : 'Mettre en marche en temps réel' }}</span>
           </button>
         </div>
       </div>
 
       <!-- ============================================================== -->
-      <!-- GRILLE PRINCIPALE 3 COLONNES CONFORME À LA MAQUETTE            -->
+      <!-- GRILLE PRINCIPALE 2 COLONNES (SANS DIAGNOSTIC MOTEURS)         -->
       <!-- ============================================================== -->
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-12 items-start">
         
         <!-- ============================================================== -->
-        <!-- COLONNE 1 : Commandes de Pilotage (lg:col-span-3)              -->
+        <!-- COLONNE 1 : Commandes de Pilotage (lg:col-span-5)              -->
         <!-- ============================================================== -->
-        <div class="flex flex-col gap-3.5 lg:col-span-3">
+        <div class="flex flex-col gap-3.5 lg:col-span-5">
           <!-- Titre section -->
           <div class="flex items-center gap-2.5 px-1">
             <div class="flex size-9 items-center justify-center rounded-xl bg-[#2563EB]/20 text-[#38BDF8]">
               <app-icon name="gamepad" [size]="20" />
             </div>
-            <h1 class="text-xl font-black tracking-wide text-white">Pilotage</h1>
+            <h2 class="text-xl font-black tracking-wide text-white">Commandes de Vol</h2>
           </div>
 
-          <!-- CARTE 1 : Mettre en marche / Armer les moteurs (Bouton Vert) -->
+          <!-- CARTE 1 : Mettre en marche / Armer les propulseurs -->
           <button
             type="button"
             (click)="toggleRealtimeRun()"
             class="group relative flex w-full flex-col gap-1 overflow-hidden rounded-2xl border border-[#10B981]/50 bg-gradient-to-br from-[#10B981] to-[#059669] p-4 py-5 text-left text-white shadow-lg shadow-[#10B981]/20 transition-all hover:brightness-105 active:scale-[0.98] cursor-pointer">
             <div class="flex items-center gap-3">
               <div class="flex size-12 items-center justify-center rounded-full bg-white/20 text-white shadow-inner">
-                <app-icon [name]="motorsRunning() ? 'check' : 'play'" [size]="24" />
+                <app-icon [name]="(isFlying() || isRealtimeRunning()) ? 'check' : 'play'" [size]="24" />
               </div>
               <div class="min-w-0">
                 <div class="text-base font-extrabold tracking-wide">
-                  {{ motorsRunning() ? 'En marche en temps réel' : 'Mettre en marche en temps réel' }}
+                  {{ (isFlying() || isRealtimeRunning()) ? 'En marche en temps réel' : 'Mettre en marche en temps réel' }}
                 </div>
                 <div class="text-[11px] text-white/90 font-medium">
-                  {{ motorsRunning() ? 'Propulseurs 2400 RPM · ESC Actifs' : 'Préparer le démarrage des propulseurs' }}
+                  {{ (isFlying() || isRealtimeRunning()) ? 'Système actif · Télémétrie synchronisée' : 'Lancer la mise sous tension et la télémétrie' }}
                 </div>
               </div>
             </div>
-            @if (motorsRunning()) {
+            @if (isFlying() || isRealtimeRunning()) {
               <div class="mt-2 flex items-center gap-1.5 text-[10px] font-bold text-white/95">
                 <span class="size-2 rounded-full bg-white animate-ping"></span>
-                <span>Alimentation nominale • Régime synchronisé</span>
+                <span>Alimentation nominale • Flux actif</span>
               </div>
             }
           </button>
@@ -149,7 +149,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
               </div>
               <div class="min-w-0">
                 <div class="text-base font-extrabold tracking-wide text-white">Décoller</div>
-                <div class="text-[11px] text-[#94A3B8] font-medium">Lancer le décollage (15 km/h)</div>
+                <div class="text-[11px] text-[#94A3B8] font-medium">Lancer le décollage (15 km/h · 120 m)</div>
               </div>
             </div>
           </button>
@@ -169,7 +169,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
               </div>
               <div class="min-w-0">
                 <div class="text-base font-extrabold tracking-wide">Atterrir</div>
-                <div class="text-[11px] text-white/80 font-medium">Déclencher l'atterrissage</div>
+                <div class="text-[11px] text-white/80 font-medium">Déclencher l'atterrissage sécurisé</div>
               </div>
             </div>
           </button>
@@ -188,259 +188,75 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
                   {{ isPaused() ? 'Reprendre la mission' : 'Pause de mission' }}
                 </div>
                 <div class="text-[11px] text-[#94A3B8] font-medium">
-                  {{ isPaused() ? 'Poursuivre le plan de vol' : 'Suspendre la mission' }}
+                  {{ isPaused() ? 'Poursuivre le plan de vol' : 'Suspendre la mission (Vol stationnaire)' }}
                 </div>
               </div>
             </div>
           </button>
-        </div>
 
-        <!-- ============================================================== -->
-        <!-- COLONNE 2 : Supervision & Vue Tactique du Drone (Centre)       -->
-        <!-- ============================================================== -->
-        <div class="flex flex-col gap-3 rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/95 p-4 shadow-xl lg:col-span-5">
-          <!-- En-tête de la carte -->
-          <div class="flex items-center justify-between border-b border-[#1E3A5F]/70 pb-3">
-            <div class="flex items-center gap-2">
-              <div class="flex size-8 items-center justify-center rounded-lg border border-[#1E3A5F] bg-[#112240] text-[#38BDF8]">
-                <app-icon name="drone" [size]="16" />
-              </div>
-              <span class="text-base font-extrabold text-white tracking-wide">Vue Tactique du Drone</span>
-            </div>
-            <!-- Badge statut moteur vert vif -->
-            <span [class]="'inline-flex items-center gap-1.5 rounded px-2.5 py-0.5 text-xs font-black shadow-xs ' +
-                           (motorsRunning() ? 'bg-[#10B981] text-black' : 'bg-[#1E293B] text-[#94A3B8]')">
-              {{ motorsRunning() ? 'EN MARCHE' : 'ARRÊTÉ' }}
-            </span>
-          </div>
-
-          <!-- VISUEL DU DRONE VUE DU DESSUS & HÉLICES ROTATIVES -->
-          <div class="relative flex min-h-[350px] items-center justify-center overflow-hidden rounded-xl border border-[#1E3A5F]/60 bg-[#071326] p-4">
-            <!-- Cercles concentriques radar de fond -->
-            <div class="pointer-events-none absolute inset-0 flex items-center justify-center opacity-20">
-              <div class="size-72 rounded-full border border-dashed border-[#38BDF8]/40"></div>
-              <div class="absolute size-48 rounded-full border border-[#38BDF8]/20"></div>
-              <div class="absolute size-24 rounded-full border border-[#38BDF8]/30"></div>
-            </div>
-
-            <!-- OVERLAYS DES 4 MOTEURS AUX 4 COINS -->
-            <!-- Moteur 1 (Haut-Gauche) -->
-            <div class="absolute top-3 left-3 z-10 w-36 rounded-lg border border-[#1E3A5F] bg-[#0A192F]/85 p-2 backdrop-blur-xs">
-              <div class="text-[11px] font-black text-white">Moteur 1</div>
-              <div class="text-[9px] font-semibold text-[#38BDF8]">{{ motorsRunning() ? 'EN MARCHE - ' + m1().rpm + ' RPM' : 'À L\'ARRÊT - 0 RPM' }}</div>
-              <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#1E293B]">
-                <div class="h-full bg-gradient-to-r from-[#10B981] to-[#38BDF8] transition-all duration-300" [style.width.%]="m1().pct"></div>
-              </div>
-            </div>
-
-            <!-- Moteur 2 (Haut-Droit) -->
-            <div class="absolute top-3 right-3 z-10 w-36 rounded-lg border border-[#1E3A5F] bg-[#0A192F]/85 p-2 backdrop-blur-xs text-right">
-              <div class="flex items-center justify-end gap-1">
-                <app-icon name="rotate" [size]="11" class="text-[#38BDF8]" />
-                <span class="text-[11px] font-black text-white">Moteur 2</span>
-              </div>
-              <div class="text-[9px] font-semibold text-[#38BDF8]">{{ motorsRunning() ? 'EN MARCHE - ' + m2().rpm + ' RPM' : 'À L\'ARRÊT - 0 RPM' }}</div>
-              <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#1E293B]">
-                <div class="h-full bg-gradient-to-r from-[#10B981] to-[#38BDF8] transition-all duration-300" [style.width.%]="m2().pct"></div>
-              </div>
-            </div>
-
-            <!-- Moteur 3 (Bas-Gauche) -->
-            <div class="absolute bottom-3 left-3 z-10 w-36 rounded-lg border border-[#1E3A5F] bg-[#0A192F]/85 p-2 backdrop-blur-xs">
-              <div class="text-[11px] font-black text-white">Moteur 3</div>
-              <div class="text-[9px] font-semibold text-[#38BDF8]">{{ motorsRunning() ? 'EN MARCHE - ' + m3().rpm + ' RPM' : 'À L\'ARRÊT - 0 RPM' }}</div>
-              <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#1E293B]">
-                <div class="h-full bg-gradient-to-r from-[#10B981] to-[#38BDF8] transition-all duration-300" [style.width.%]="m3().pct"></div>
-              </div>
-            </div>
-
-            <!-- Moteur 4 (Bas-Droit) -->
-            <div class="absolute bottom-3 right-3 z-10 w-36 rounded-lg border border-[#1E3A5F] bg-[#0A192F]/85 p-2 backdrop-blur-xs text-right">
-              <div class="flex items-center justify-end gap-1">
-                <app-icon name="rotate" [size]="11" class="text-[#38BDF8]" />
-                <span class="text-[11px] font-black text-white">Moteur 4</span>
-              </div>
-              <div class="text-[9px] font-semibold text-[#38BDF8]">{{ motorsRunning() ? 'EN MARCHE - ' + m4().rpm + ' RPM' : 'À L\'ARRÊT - 0 RPM' }}</div>
-              <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#1E293B]">
-                <div class="h-full bg-gradient-to-r from-[#10B981] to-[#38BDF8] transition-all duration-300" [style.width.%]="m4().pct"></div>
-              </div>
-            </div>
-
-            <!-- DRONE SVG DESSINÉ AVEC EFFET HÉLICES VORTEX -->
-            <div class="relative z-0 size-64">
-              <!-- Hélice 1 (Haut-Gauche) avec vortex tournant -->
-              <div class="absolute top-1 left-1 size-24">
-                <div [class]="'size-full rounded-full border border-[#38BDF8]/40 ' + (motorsRunning() ? 'bg-[#38BDF8]/15 animate-spin duration-300' : 'bg-transparent')">
-                  @if (motorsRunning()) {
-                    <div class="size-full rounded-full border-t-2 border-b-2 border-[#38BDF8] opacity-80 blur-[0.5px]"></div>
-                  }
-                </div>
-              </div>
-
-              <!-- Hélice 2 (Haut-Droit) avec vortex tournant -->
-              <div class="absolute top-1 right-1 size-24">
-                <div [class]="'size-full rounded-full border border-[#38BDF8]/40 ' + (motorsRunning() ? 'bg-[#38BDF8]/15 animate-spin duration-300' : 'bg-transparent')">
-                  @if (motorsRunning()) {
-                    <div class="size-full rounded-full border-t-2 border-b-2 border-[#38BDF8] opacity-80 blur-[0.5px]"></div>
-                  }
-                </div>
-              </div>
-
-              <!-- Hélice 3 (Bas-Gauche) avec vortex tournant -->
-              <div class="absolute bottom-1 left-1 size-24">
-                <div [class]="'size-full rounded-full border border-[#38BDF8]/40 ' + (motorsRunning() ? 'bg-[#38BDF8]/15 animate-spin duration-300' : 'bg-transparent')">
-                  @if (motorsRunning()) {
-                    <div class="size-full rounded-full border-t-2 border-b-2 border-[#38BDF8] opacity-80 blur-[0.5px]"></div>
-                  }
-                </div>
-              </div>
-
-              <!-- Hélice 4 (Bas-Droit) avec vortex tournant -->
-              <div class="absolute bottom-1 right-1 size-24">
-                <div [class]="'size-full rounded-full border border-[#38BDF8]/40 ' + (motorsRunning() ? 'bg-[#38BDF8]/15 animate-spin duration-300' : 'bg-transparent')">
-                  @if (motorsRunning()) {
-                    <div class="size-full rounded-full border-t-2 border-b-2 border-[#38BDF8] opacity-80 blur-[0.5px]"></div>
-                  }
-                </div>
-              </div>
-
-              <!-- Châssis Central du Quadricoptère DISDP -->
-              <svg viewBox="0 0 200 200" class="absolute inset-0 size-full filter drop-shadow-[0_10px_25px_rgba(0,0,0,0.8)]">
-                <!-- Bras diagonaux en fibre de carbone -->
-                <line x1="45" y1="45" x2="155" y2="155" stroke="#1E293B" stroke-width="12" stroke-linecap="round" />
-                <line x1="155" y1="45" x2="45" y2="155" stroke="#1E293B" stroke-width="12" stroke-linecap="round" />
-                <line x1="45" y1="45" x2="155" y2="155" stroke="#38BDF8" stroke-width="2" opacity="0.6" />
-                <line x1="155" y1="45" x2="45" y2="155" stroke="#38BDF8" stroke-width="2" opacity="0.6" />
-
-                <!-- Moteurs Brushless aux 4 extrémités -->
-                <circle cx="45" cy="45" r="11" fill="#0F172A" stroke="#38BDF8" stroke-width="2.5" />
-                <circle cx="155" cy="45" r="11" fill="#0F172A" stroke="#38BDF8" stroke-width="2.5" />
-                <circle cx="45" cy="155" r="11" fill="#0F172A" stroke="#38BDF8" stroke-width="2.5" />
-                <circle cx="155" cy="155" r="11" fill="#0F172A" stroke="#38BDF8" stroke-width="2.5" />
-
-                <!-- Fuselage Carbone Central Aérodynamique -->
-                <rect x="74" y="55" width="52" height="90" rx="22" fill="#1E293B" stroke="#475569" stroke-width="2" />
-                <!-- Verrière / Cockpit supérieur -->
-                <rect x="84" y="65" width="32" height="45" rx="12" fill="#0F172A" stroke="#38BDF8" stroke-width="1.5" />
-                <circle cx="100" cy="80" r="5" fill="#38BDF8" [class]="motorsRunning() ? 'animate-pulse' : ''" />
-                <!-- Capteur Caméra avant -->
-                <circle cx="100" cy="58" r="4" [attr.fill]="motorsRunning() ? '#10B981' : '#64748B'" />
-                <!-- LED statut arrière -->
-                <circle cx="100" cy="138" r="3.5" [attr.fill]="motorsRunning() ? '#10B981' : '#EF4444'" />
-              </svg>
-            </div>
-          </div>
-
-          <!-- LISTE DES 4 MOTEURS SOUS LE VISUEL -->
-          <div class="flex flex-col gap-2 pt-1">
-            <!-- Moteur 1 -->
-            <div class="flex items-center justify-between rounded-xl border border-[#1E3A5F] bg-[#112240] px-3.5 py-2.5">
-              <div class="flex items-center gap-3">
-                <svg viewBox="0 0 36 36" fill="none" class="size-6 text-[#38BDF8] shrink-0">
-                  <path d="M18 4 C24 4, 30 9, 31 16 C32 23, 27 30, 20 31 C13 32, 6 27, 5 20 C4 14, 8 8, 14 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                  <path d="M18 9 C22 9, 26 12, 27 16 C28 21, 24 25, 20 26 C15 27, 11 23, 10 19 C9 15, 12 11, 16 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <circle cx="18" cy="18" r="2.5" fill="currentColor"/>
-                </svg>
-                <div>
-                  <div class="text-xs font-bold text-white">Moteur 1 - {{ motorsRunning() ? 'Tourne' : 'À l\'arrêt' }}</div>
-                  <div class="text-[10px] text-[#94A3B8] font-medium">{{ m1().rpm }} RPM • Temp: {{ m1().temp }}°C</div>
-                </div>
-              </div>
-              <span [class]="'size-2 rounded-full ' + (motorsRunning() ? 'bg-[#10B981] shadow-[0_0_8px_#10B981]' : 'bg-[#64748B]')"></span>
-            </div>
-
-            <!-- Moteur 2 -->
-            <div class="flex items-center justify-between rounded-xl border border-[#1E3A5F] bg-[#112240] px-3.5 py-2.5">
-              <div class="flex items-center gap-3">
-                <svg viewBox="0 0 36 36" fill="none" class="size-6 text-[#38BDF8] shrink-0">
-                  <path d="M18 4 C24 4, 30 9, 31 16 C32 23, 27 30, 20 31 C13 32, 6 27, 5 20 C4 14, 8 8, 14 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                  <path d="M18 9 C22 9, 26 12, 27 16 C28 21, 24 25, 20 26 C15 27, 11 23, 10 19 C9 15, 12 11, 16 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <circle cx="18" cy="18" r="2.5" fill="currentColor"/>
-                </svg>
-                <div>
-                  <div class="text-xs font-bold text-white">Moteur 2 - {{ motorsRunning() ? 'Tourne' : 'À l\'arrêt' }}</div>
-                  <div class="text-[10px] text-[#94A3B8] font-medium">{{ m2().rpm }} RPM • Temp: {{ m2().temp }}°C</div>
-                </div>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span [class]="'size-2 rounded-full ' + (motorsRunning() ? 'bg-[#10B981] shadow-[0_0_8px_#10B981]' : 'bg-[#64748B]')"></span>
-                <span [class]="'size-2 rounded-full ' + (motorsRunning() ? 'bg-[#10B981] shadow-[0_0_8px_#10B981]' : 'bg-[#64748B]')"></span>
-              </div>
-            </div>
-
-            <!-- Moteur 3 -->
-            <div class="flex items-center justify-between rounded-xl border border-[#1E3A5F] bg-[#112240] px-3.5 py-2.5">
-              <div class="flex items-center gap-3">
-                <svg viewBox="0 0 36 36" fill="none" class="size-6 text-[#38BDF8] shrink-0">
-                  <path d="M18 4 C24 4, 30 9, 31 16 C32 23, 27 30, 20 31 C13 32, 6 27, 5 20 C4 14, 8 8, 14 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                  <path d="M18 9 C22 9, 26 12, 27 16 C28 21, 24 25, 20 26 C15 27, 11 23, 10 19 C9 15, 12 11, 16 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <circle cx="18" cy="18" r="2.5" fill="currentColor"/>
-                </svg>
-                <div>
-                  <div class="text-xs font-bold text-white">Moteur 3 - {{ motorsRunning() ? 'Tourne' : 'À l\'arrêt' }}</div>
-                  <div class="text-[10px] text-[#94A3B8] font-medium">{{ m3().rpm }} RPM • Temp: {{ m3().temp }}°C</div>
-                </div>
-              </div>
-              <span [class]="'size-2 rounded-full ' + (motorsRunning() ? 'bg-[#10B981] shadow-[0_0_8px_#10B981]' : 'bg-[#64748B]')"></span>
-            </div>
-
-            <!-- Moteur 4 -->
-            <div class="flex items-center justify-between rounded-xl border border-[#1E3A5F] bg-[#112240] px-3.5 py-2.5">
-              <div class="flex items-center gap-3">
-                <svg viewBox="0 0 36 36" fill="none" class="size-6 text-[#38BDF8] shrink-0">
-                  <path d="M18 4 C24 4, 30 9, 31 16 C32 23, 27 30, 20 31 C13 32, 6 27, 5 20 C4 14, 8 8, 14 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                  <path d="M18 9 C22 9, 26 12, 27 16 C28 21, 24 25, 20 26 C15 27, 11 23, 10 19 C9 15, 12 11, 16 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <circle cx="18" cy="18" r="2.5" fill="currentColor"/>
-                </svg>
-                <div>
-                  <div class="text-xs font-bold text-white">Moteur 4 - {{ motorsRunning() ? 'Tourne' : 'À l\'arrêt' }}</div>
-                  <div class="text-[10px] text-[#94A3B8] font-medium">{{ m4().rpm }} RPM • Temp: {{ m4().temp }}°C</div>
-                </div>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span [class]="'size-2 rounded-full ' + (motorsRunning() ? 'bg-[#10B981] shadow-[0_0_8px_#10B981]' : 'bg-[#64748B]')"></span>
-                <span [class]="'size-2 rounded-full ' + (motorsRunning() ? 'bg-[#10B981] shadow-[0_0_8px_#10B981]' : 'bg-[#64748B]')"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- BANNIÈRE PIED DE CARTE ÉTAT GÉNÉRAL -->
-          <div class="mt-auto flex items-center justify-between rounded-xl border border-[#10B981]/40 bg-[#10B981]/10 px-3.5 py-2 text-xs font-bold text-white">
-            <span class="flex items-center gap-2">
-              <span [class]="'size-2 rounded-full ' + (motorsRunning() ? 'bg-[#10B981] animate-pulse' : 'bg-[#64748B]')"></span>
-              {{ motorsRunning() ? 'État général : Moteurs en rotation — Système propulsé' : 'État général : Moteurs au repos — Veille sécurisée' }}
-            </span>
-            <span class="rounded-md bg-[#10B981] px-2 py-0.5 text-[10px] font-black text-slate-900 shadow-xs">
-              {{ motorsRunning() ? 'OK' : 'STANDBY' }}
-            </span>
-          </div>
-        </div>
-
-        <!-- ============================================================== -->
-        <!-- COLONNE 3 : Vidéo, Télémétrie, Diagnostics (lg:col-span-4)     -->
-        <!-- ============================================================== -->
-        <div class="flex flex-col gap-3.5 lg:col-span-4">
-          
-          <!-- CARTE 1 : Vidéo en Direct -->
-          <div class="rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/95 p-3.5 shadow-xl">
-            <div class="flex items-center justify-between pb-2.5">
+          <!-- CARTE 5 : Réglage Vitesse & RTH (Retour à la base) -->
+          <div class="rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/90 p-4 shadow-xl">
+            <div class="flex items-center justify-between pb-3 border-b border-[#1E3A5F]/60">
               <div class="flex items-center gap-2">
-                <app-icon name="camera" [size]="16" class="text-[#38BDF8]" />
-                <span class="text-sm font-extrabold text-white">Vidéo en Direct</span>
+                <app-icon name="gauge" [size]="16" class="text-[#38BDF8]" />
+                <span class="text-sm font-extrabold text-white">Contrôle de Vitesse & RTH</span>
               </div>
-              <div class="flex items-center gap-1.5">
-                <span class="flex items-center gap-1 rounded-md bg-[#EF4444] px-1.5 py-0.5 text-[9px] font-black text-white shadow-xs">
+              <span class="text-xs font-bold text-[#38BDF8]">{{ liveSpeed().toFixed(1) }} km/h</span>
+            </div>
+
+            <div class="mt-3 flex items-center gap-2.5">
+              <button
+                type="button"
+                (click)="adjustSpeed(-2)"
+                [disabled]="!isFlying() && !isRealtimeRunning()"
+                class="flex-1 rounded-xl border border-[#1E3A5F] bg-[#112240] py-2 text-xs font-bold text-white transition hover:border-[#38BDF8] hover:bg-[#162C52] disabled:opacity-40 cursor-pointer">
+                - 2 km/h
+              </button>
+              <button
+                type="button"
+                (click)="adjustSpeed(2)"
+                [disabled]="!isFlying() && !isRealtimeRunning()"
+                class="flex-1 rounded-xl border border-[#1E3A5F] bg-[#112240] py-2 text-xs font-bold text-white transition hover:border-[#38BDF8] hover:bg-[#162C52] disabled:opacity-40 cursor-pointer">
+                + 2 km/h
+              </button>
+            </div>
+
+            <button
+              type="button"
+              (click)="onReturnToBase()"
+              [disabled]="!isFlying()"
+              class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[#F59E0B]/50 bg-[#F59E0B]/15 py-2 text-xs font-extrabold text-[#FBBF24] transition hover:bg-[#F59E0B]/25 disabled:opacity-40 cursor-pointer">
+              <app-icon name="compass" [size]="14" />
+              <span>RTH · Retour sécurisé à la base</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- COLONNE 2 : Vidéo en Direct, Télémétrie & Capteurs (lg:col-span-7) -->
+        <!-- ============================================================== -->
+        <div class="flex flex-col gap-3.5 lg:col-span-7">
+          
+          <!-- CARTE 1 : Vidéo en Direct Grand Format -->
+          <div class="rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/95 p-4 shadow-xl">
+            <div class="flex items-center justify-between pb-3 border-b border-[#1E3A5F]/60">
+              <div class="flex items-center gap-2">
+                <app-icon name="camera" [size]="18" class="text-[#38BDF8]" />
+                <span class="text-base font-extrabold text-white">Vidéo en Direct</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="flex items-center gap-1 rounded-md bg-[#EF4444] px-2 py-0.5 text-[10px] font-black text-white shadow-xs">
                   <span class="size-1.5 rounded-full bg-white animate-ping"></span>
                   REC
                 </span>
-                <span class="rounded-md bg-[#1E293B] px-1.5 py-0.5 text-[9px] font-bold text-[#94A3B8]">
-                  1080p
+                <span class="rounded-md bg-[#1E293B] px-2 py-0.5 text-[10px] font-bold text-[#94A3B8]">
+                  1080p · 60 FPS
                 </span>
               </div>
             </div>
 
-            <!-- Cadre vidéo avec flux actif du drone -->
-            <div class="relative aspect-video w-full overflow-hidden rounded-xl border border-[#1E3A5F] bg-[#030914] shadow-inner">
+            <!-- Cadre vidéo cinématique avec HUD actif -->
+            <div class="relative mt-3 aspect-video w-full overflow-hidden rounded-xl border border-[#1E3A5F] bg-[#030914] shadow-inner">
               <video
                 class="absolute inset-0 size-full object-cover"
                 autoplay
@@ -451,7 +267,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
               <!-- Réticule HUD tactique -->
               <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div class="relative size-16">
+                <div class="relative size-20">
                   <div class="absolute inset-x-0 top-1/2 h-[1px] bg-[#38BDF8]/40"></div>
                   <div class="absolute inset-y-0 left-1/2 w-[1px] bg-[#38BDF8]/40"></div>
                   <div class="absolute inset-2 rounded-full border border-dashed border-[#38BDF8]/60"></div>
@@ -459,65 +275,78 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
               </div>
 
               <!-- Badges HUD en direct -->
-              <div class="pointer-events-none absolute top-2 right-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-mono font-bold text-[#34D399]">
-                FPS: 60 • 4K HDR
+              <div class="pointer-events-none absolute top-3 right-3 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-mono font-bold text-[#34D399] border border-[#1E3A5F]">
+                FPS: 60 • 4K HDR • ISO 100
               </div>
-              <div class="pointer-events-none absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-mono font-bold text-[#38BDF8]">
-                CAM_01 • PITCH: +1.2°
+              <div class="pointer-events-none absolute bottom-3 left-3 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-mono font-bold text-[#38BDF8] border border-[#1E3A5F]">
+                OPTICAL_01 • PITCH: +1.2° • ROLL: -0.4°
               </div>
             </div>
           </div>
 
-          <!-- CARTE 2 : Télémétrie -->
-          <div class="rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/95 p-3.5 shadow-xl">
-            <div class="flex items-center gap-2 pb-2.5">
-              <app-icon name="gauge" [size]="16" class="text-[#38BDF8]" />
-              <span class="text-sm font-extrabold text-white">Télémétrie</span>
+          <!-- CARTE 2 : Télémétrie Complète en Temps Réel -->
+          <div class="rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/95 p-4 shadow-xl">
+            <div class="flex items-center gap-2 pb-3 border-b border-[#1E3A5F]/60">
+              <app-icon name="gauge" [size]="18" class="text-[#38BDF8]" />
+              <span class="text-base font-extrabold text-white">Télémétrie en Temps Réel</span>
             </div>
-            <div class="space-y-2 text-xs">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 text-xs">
               <!-- Batterie -->
-              <div class="flex items-center justify-between rounded-lg bg-[#112240] px-3 py-1.5">
-                <span class="text-[#94A3B8] font-medium">Batterie</span>
-                <div class="flex items-center gap-2">
-                  <div class="h-2 w-24 overflow-hidden rounded-full bg-[#1E293B]">
+              <div class="flex items-center justify-between rounded-xl bg-[#112240] p-3 border border-[#1E3A5F]/50">
+                <div class="flex items-center gap-2 text-[#94A3B8]">
+                  <app-icon name="battery" [size]="16" class="text-[#10B981]" />
+                  <span class="font-semibold">Niveau Batterie</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                  <div class="h-2 w-20 overflow-hidden rounded-full bg-[#1E293B]">
                     <div class="h-full bg-gradient-to-r from-[#10B981] to-[#38BDF8]" [style.width.%]="liveBattery()"></div>
                   </div>
-                  <span class="font-bold text-white">{{ liveBattery().toFixed(0) }} %</span>
+                  <span class="font-extrabold text-white">{{ liveBattery().toFixed(0) }} %</span>
                 </div>
               </div>
 
               <!-- Altitude -->
-              <div class="flex items-center justify-between rounded-lg bg-[#112240] px-3 py-1.5">
-                <span class="text-[#94A3B8] font-medium">Altitude</span>
-                <span class="font-bold text-white">{{ liveAltitude().toFixed(0) }} m</span>
+              <div class="flex items-center justify-between rounded-xl bg-[#112240] p-3 border border-[#1E3A5F]/50">
+                <div class="flex items-center gap-2 text-[#94A3B8]">
+                  <app-icon name="mountain" [size]="16" class="text-[#38BDF8]" />
+                  <span class="font-semibold">Altitude relative</span>
+                </div>
+                <span class="font-extrabold text-white text-sm">{{ liveAltitude().toFixed(0) }} m</span>
               </div>
 
               <!-- Vitesse -->
-              <div class="flex items-center justify-between rounded-lg bg-[#112240] px-3 py-1.5">
-                <span class="text-[#94A3B8] font-medium">Vitesse</span>
-                <span class="font-bold text-[#38BDF8]">{{ liveSpeed().toFixed(0) }} km/h</span>
+              <div class="flex items-center justify-between rounded-xl bg-[#112240] p-3 border border-[#1E3A5F]/50">
+                <div class="flex items-center gap-2 text-[#94A3B8]">
+                  <app-icon name="gauge" [size]="16" class="text-[#38BDF8]" />
+                  <span class="font-semibold">Vitesse sol</span>
+                </div>
+                <span class="font-extrabold text-[#38BDF8] text-sm">{{ liveSpeed().toFixed(0) }} km/h</span>
               </div>
 
               <!-- Coordonnées GPS -->
-              <div class="flex items-center justify-between rounded-lg bg-[#112240] px-3 py-1.5">
-                <span class="text-[#94A3B8] font-medium">Coordonnées GPS</span>
-                <span class="font-mono text-[11px] font-bold text-[#34D399]">{{ liveGps() }}</span>
+              <div class="flex items-center justify-between rounded-xl bg-[#112240] p-3 border border-[#1E3A5F]/50">
+                <div class="flex items-center gap-2 text-[#94A3B8]">
+                  <app-icon name="pin" [size]="16" class="text-[#34D399]" />
+                  <span class="font-semibold">Coordonnées GPS</span>
+                </div>
+                <span class="font-mono text-xs font-bold text-[#34D399]">{{ liveGps() }}</span>
               </div>
             </div>
           </div>
 
-          <!-- CARTE 3 : Détection d'obstacles -->
-          <div class="rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/95 p-3.5 shadow-xl">
-            <div class="flex items-center gap-2 pb-2">
-              <app-icon name="crosshair" [size]="16" class="text-[#38BDF8]" />
-              <span class="text-sm font-extrabold text-white">Détection d'obstacles</span>
+          <!-- CARTE 3 : Détection d'obstacles & Sécurité du vol -->
+          <div class="rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/95 p-4 shadow-xl">
+            <div class="flex items-center gap-2 pb-2.5 border-b border-[#1E3A5F]/60">
+              <app-icon name="crosshair" [size]="18" class="text-[#38BDF8]" />
+              <span class="text-base font-extrabold text-white">Détection d'obstacles & Sécurité</span>
             </div>
-            <div class="flex items-center gap-3 rounded-lg bg-[#112240] p-2.5">
-              <span class="text-sm font-bold text-white">✛</span>
-              <div class="h-2 flex-1 overflow-hidden rounded-full bg-[#1E293B]">
-                <div class="h-full bg-gradient-to-r from-[#10B981] to-[#34D399]" style="width: 25%;"></div>
+            <div class="mt-3 flex items-center gap-3 rounded-xl bg-[#112240] p-3 border border-[#1E3A5F]/50">
+              <span class="text-base font-bold text-white">✛</span>
+              <div class="h-2.5 flex-1 overflow-hidden rounded-full bg-[#1E293B]">
+                <div class="h-full bg-gradient-to-r from-[#10B981] to-[#34D399]" style="width: 20%;"></div>
               </div>
-              <span class="text-xs font-semibold text-[#34D399]">Aucun obstacle détecté</span>
+              <span class="text-xs font-bold text-[#34D399]">Aucun obstacle détecté • Périmètre dégagé</span>
             </div>
           </div>
 
@@ -537,7 +366,7 @@ export class PilotagePage implements OnInit {
 
   readonly demoVideoUrl = APP_SETTINGS.demoVideoSources?.[0] ?? '';
 
-  // État de mise en marche temps réel (initialisé à true pour afficher la vue nominale, contrôlable en direct)
+  // État de mise en marche temps réel
   readonly isRealtimeRunning = signal(true);
   readonly isPaused = signal(false);
 
@@ -546,53 +375,34 @@ export class PilotagePage implements OnInit {
 
   readonly currentDrone = computed(() => this.drones.selected());
   readonly isFlying = computed(() => this.currentDrone()?.status === 'in-flight');
-  readonly motorsRunning = computed(() => this.isRealtimeRunning() || this.isFlying());
 
   // Télémétrie réactive en direct
   readonly liveBattery = computed(() => {
-    if (!this.motorsRunning()) return 80;
+    if (!this.isFlying() && !this.isRealtimeRunning()) return 80;
     const tick = this.jitterTick();
     const drained = 78 - (tick * 0.02) % 4;
     return Math.max(10, Math.round(drained * 10) / 10);
   });
 
   readonly liveAltitude = computed(() => {
-    if (!this.motorsRunning()) return 0;
+    if (!this.isFlying() && !this.isRealtimeRunning()) return 0;
     const j = Math.sin(this.jitterTick()) * 0.4;
     return Math.round((120 + j) * 10) / 10;
   });
 
   readonly liveSpeed = computed(() => {
-    if (!this.motorsRunning()) return 0;
+    if (!this.isFlying() && !this.isRealtimeRunning()) return 0;
     const j = Math.cos(this.jitterTick()) * 0.3;
     return Math.round((15 + j) * 10) / 10;
   });
 
   readonly liveGps = computed(() => {
     const d = this.currentDrone();
-    const lat = (d?.latitude ?? 5.3594) + (this.motorsRunning() ? (this.jitterTick() * 0.000008) % 0.001 : 0);
-    const lng = (d?.longitude ?? -4.0083) - (this.motorsRunning() ? (this.jitterTick() * 0.000006) % 0.001 : 0);
+    const isLive = this.isFlying() || this.isRealtimeRunning();
+    const lat = (d?.latitude ?? 5.3594) + (isLive ? (this.jitterTick() * 0.000008) % 0.001 : 0);
+    const lng = (d?.longitude ?? -4.0083) - (isLive ? (this.jitterTick() * 0.000006) % 0.001 : 0);
     return `${lat.toFixed(4)}° N, ${Math.abs(lng).toFixed(4)}° W`;
   });
-
-  // Calculs dynamiques des 4 moteurs en temps réel (valeurs nominales 2400, 2380, 2410, 2395 RPM)
-  readonly m1 = computed(() => this.getMotorState(2400, 42, 75, 1));
-  readonly m2 = computed(() => this.getMotorState(2380, 41, 74, 2));
-  readonly m3 = computed(() => this.getMotorState(2410, 43, 76, 3));
-  readonly m4 = computed(() => this.getMotorState(2395, 42, 75, 4));
-
-  private getMotorState(nominalRpm: number, nominalTemp: number, nominalPct: number, motorIdx: number) {
-    if (!this.motorsRunning()) {
-      return { rpm: 0, temp: 24, pct: 0 };
-    }
-    const tick = this.jitterTick();
-    const offset = Math.round(Math.sin(tick + motorIdx) * 12);
-    return {
-      rpm: nominalRpm + offset,
-      temp: nominalTemp,
-      pct: nominalPct,
-    };
-  }
 
   ngOnInit(): void {
     // Boucle de pulsation temps réel à 1 Hz
@@ -625,11 +435,11 @@ export class PilotagePage implements OnInit {
 
     if (nextState) {
       this.telemetry.start();
-      this.notifications.success(`Mise en marche temps réel activée pour ${d.name} : Propulseurs à 2400 RPM.`);
-      this.backend.recordHistory('mise_en_marche_temps_reel', `Mise en marche temps réel de ${d.name} (Propulseurs armés à 2400 RPM, télémétrie active)`, d.id);
+      this.notifications.success(`Mise en marche temps réel activée pour ${d.name}.`);
+      this.backend.recordHistory('mise_en_marche_temps_reel', `Mise en marche temps réel de ${d.name} (Flux vidéo et capteurs synchronisés)`, d.id);
       this.backend.syncTelemetry(d.id, { speed: 4.17, altitude: 120, batteryLevel: 78 });
     } else {
-      this.notifications.push(`Mise en marche interrompue pour ${d.name} : Propulseurs coupés.`, 'info');
+      this.notifications.push(`Mise en marche interrompue pour ${d.name}.`, 'info');
       this.backend.recordHistory('arret_marche_temps_reel', `Arrêt de la mise en marche temps réel pour ${d.name}`, d.id);
       this.backend.syncTelemetry(d.id, { speed: 0, altitude: 0, batteryLevel: this.liveBattery() });
     }
@@ -669,5 +479,21 @@ export class PilotagePage implements OnInit {
       this.notifications.success(`Reprise de mission pour ${d.name}.`);
       this.backend.recordHistory('reprise_vol', `Reprise du vol automatique pour ${d.name}`, d.id);
     }
+  }
+
+  adjustSpeed(delta: number): void {
+    const d = this.currentDrone();
+    if (!d) return;
+    const current = d.speed || 4.17;
+    const newSpeed = Math.max(1, current + (delta / 3.6));
+    this.flightControl.setSpeed(d.id, newSpeed);
+    this.backend.recordHistory('ajustement_vitesse', `Ajustement de la vitesse de ${d.name} : ${(newSpeed * 3.6).toFixed(0)} km/h`, d.id);
+  }
+
+  onReturnToBase(): void {
+    const d = this.currentDrone();
+    if (!d) return;
+    this.flightControl.returnToBase(d.id);
+    this.backend.recordHistory('rth_retour_base', `Ordre RTH (Return to Home) déclenché pour ${d.name}`, d.id);
   }
 }
