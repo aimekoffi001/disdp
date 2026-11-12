@@ -12,6 +12,7 @@ import { FlightHistoryComponent } from './components/flight-history/flight-histo
 import { FlightSchedulerComponent } from './components/flight-scheduler/flight-scheduler.component';
 import { LiveCameraComponent } from './components/live-camera/live-camera.component';
 import { MissionsTableComponent } from './components/missions-table/missions-table.component';
+import { MotorsPanelComponent } from './components/motors-panel/motors-panel.component';
 import { PilotagePanelComponent } from './components/pilotage-panel/pilotage-panel.component';
 import { SensorsPanelComponent } from './components/sensors-panel/sensors-panel.component';
 import { StatisticsComponent } from './components/statistics/statistics.component';
@@ -25,7 +26,7 @@ type Tab = 'live' | 'pilotage' | 'telemetry' | 'map' | 'activity';
   selector: 'app-dashboard',
   imports: [
     IconComponent, DroneControlComponent, StatisticsComponent, LiveCameraComponent, BatteryPanelComponent,
-    PilotagePanelComponent, FlightDataComponent, SensorsPanelComponent, MissionsTableComponent, AlertsTableComponent,
+    PilotagePanelComponent, FlightDataComponent, SensorsPanelComponent, MotorsPanelComponent, MissionsTableComponent, AlertsTableComponent,
     FlightHistoryComponent, DroneMapComponent, FlightSchedulerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -78,8 +79,11 @@ type Tab = 'live' | 'pilotage' | 'telemetry' | 'map' | 'activity';
         }
         @case ('telemetry') {
           <div class="grid gap-4 lg:grid-cols-12">
-            <div class="lg:col-span-8"><app-flight-data /></div>
-            <div class="lg:col-span-4"><app-sensors-panel /></div>
+            <div class="lg:col-span-7"><app-flight-data /></div>
+            <div class="flex flex-col gap-4 lg:col-span-5">
+              <app-motors-panel />
+              <app-sensors-panel />
+            </div>
           </div>
         }
         @case ('map') { <app-drone-map [controls]="true" /> }
