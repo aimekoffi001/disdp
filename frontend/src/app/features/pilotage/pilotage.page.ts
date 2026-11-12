@@ -196,16 +196,16 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
         </div>
 
         <!-- ============================================================== -->
-        <!-- COLONNE 2 : Diagnostic des moteurs (Centre - lg:col-span-5)    -->
+        <!-- COLONNE 2 : Supervision & Vue Tactique du Drone (Centre)       -->
         <!-- ============================================================== -->
         <div class="flex flex-col gap-3 rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/95 p-4 shadow-xl lg:col-span-5">
           <!-- En-tête de la carte -->
           <div class="flex items-center justify-between border-b border-[#1E3A5F]/70 pb-3">
             <div class="flex items-center gap-2">
               <div class="flex size-8 items-center justify-center rounded-lg border border-[#1E3A5F] bg-[#112240] text-[#38BDF8]">
-                <app-icon name="camera" [size]="16" />
+                <app-icon name="drone" [size]="16" />
               </div>
-              <span class="text-base font-extrabold text-white tracking-wide">Diagnostic des moteurs</span>
+              <span class="text-base font-extrabold text-white tracking-wide">Vue Tactique du Drone</span>
             </div>
             <!-- Badge statut moteur vert vif -->
             <span [class]="'inline-flex items-center gap-1.5 rounded px-2.5 py-0.5 text-xs font-black shadow-xs ' +
@@ -506,45 +506,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             </div>
           </div>
 
-          <!-- CARTE 3 : Diagnostic des moteurs (Résumé) -->
-          <div class="rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/95 p-3.5 shadow-xl">
-            <div class="flex items-center justify-between pb-2">
-              <div class="flex items-center gap-2">
-                <app-icon name="wrench" [size]="16" class="text-[#38BDF8]" />
-                <span class="text-sm font-extrabold text-white">Diagnostic des moteurs</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-semibold text-[#94A3B8]">État Moteurs</span>
-                <span [class]="'rounded px-2 py-0.5 text-[10px] font-black ' + (motorsRunning() ? 'bg-[#10B981] text-black' : 'bg-[#1E293B] text-[#94A3B8]')">
-                  {{ motorsRunning() ? 'OK' : 'VEILLE' }}
-                </span>
-              </div>
-            </div>
-            <!-- Ligne de statut -->
-            <div class="mb-2.5 h-1.5 w-full overflow-hidden rounded-full bg-[#1E293B]">
-              <div class="h-full bg-[#38BDF8] transition-all duration-300" [style.width.%]="motorsRunning() ? 70 : 0"></div>
-            </div>
-            <div class="grid grid-cols-2 gap-2 text-[11px]">
-              <div class="flex items-center gap-1.5 rounded-lg bg-[#112240] p-2 text-slate-200">
-                <app-icon name="rotate" [size]="12" [class]="motorsRunning() ? 'text-[#38BDF8]' : 'text-slate-500'" />
-                <span>Moteur 1 - {{ motorsRunning() ? 'Nominal' : 'Au repos' }}</span>
-              </div>
-              <div class="flex items-center gap-1.5 rounded-lg bg-[#112240] p-2 text-slate-200">
-                <app-icon name="rotate" [size]="12" [class]="motorsRunning() ? 'text-[#38BDF8]' : 'text-slate-500'" />
-                <span>Moteur 2 - {{ motorsRunning() ? 'Nominal' : 'Au repos' }}</span>
-              </div>
-              <div class="flex items-center gap-1.5 rounded-lg bg-[#112240] p-2 text-slate-200">
-                <app-icon name="rotate" [size]="12" [class]="motorsRunning() ? 'text-[#38BDF8]' : 'text-slate-500'" />
-                <span>Moteur 3 - {{ motorsRunning() ? 'Nominal' : 'Au repos' }}</span>
-              </div>
-              <div class="flex items-center gap-1.5 rounded-lg bg-[#112240] p-2 text-slate-200">
-                <app-icon name="rotate" [size]="12" [class]="motorsRunning() ? 'text-[#38BDF8]' : 'text-slate-500'" />
-                <span>Moteur 4 - {{ motorsRunning() ? 'Nominal' : 'Au repos' }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- CARTE 4 : Détection d'obstacles -->
+          <!-- CARTE 3 : Détection d'obstacles -->
           <div class="rounded-2xl border border-[#1E3A5F] bg-[#0A192F]/95 p-3.5 shadow-xl">
             <div class="flex items-center gap-2 pb-2">
               <app-icon name="crosshair" [size]="16" class="text-[#38BDF8]" />
