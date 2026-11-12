@@ -16,7 +16,7 @@ export class UiService {
   private readonly missions = inject(MissionService);
 
   readonly menuOpen = signal(false);
-  readonly dashboardTab = signal<'live' | 'telemetry' | 'map' | 'activity'>('live');
+  readonly dashboardTab = signal<'live' | 'pilotage' | 'telemetry' | 'map' | 'activity'>('live');
   readonly detail = signal<DetailView | null>(null);
   readonly confirmRequest = signal<ConfirmRequest | null>(null);
   readonly droneForm = signal<{ drone?: Drone } | null>(null);

@@ -12,20 +12,20 @@ import { FlightHistoryComponent } from './components/flight-history/flight-histo
 import { FlightSchedulerComponent } from './components/flight-scheduler/flight-scheduler.component';
 import { LiveCameraComponent } from './components/live-camera/live-camera.component';
 import { MissionsTableComponent } from './components/missions-table/missions-table.component';
-import { MotorsPanelComponent } from './components/motors-panel/motors-panel.component';
+import { PilotagePanelComponent } from './components/pilotage-panel/pilotage-panel.component';
 import { SensorsPanelComponent } from './components/sensors-panel/sensors-panel.component';
 import { StatisticsComponent } from './components/statistics/statistics.component';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const timeFmt = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-type Tab = 'live' | 'telemetry' | 'map' | 'activity';
+type Tab = 'live' | 'pilotage' | 'telemetry' | 'map' | 'activity';
 
 @Component({
   selector: 'app-dashboard',
   imports: [
     IconComponent, DroneControlComponent, StatisticsComponent, LiveCameraComponent, BatteryPanelComponent,
-    MotorsPanelComponent, FlightDataComponent, SensorsPanelComponent, MissionsTableComponent, AlertsTableComponent,
+    PilotagePanelComponent, FlightDataComponent, SensorsPanelComponent, MissionsTableComponent, AlertsTableComponent,
     FlightHistoryComponent, DroneMapComponent, FlightSchedulerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,7 +48,7 @@ type Tab = 'live' | 'telemetry' | 'map' | 'activity';
 
       <!-- Barre d'onglets parfaitement alignée -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1E3A5F]/70 pb-2">
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:inline-flex items-center gap-1.5 rounded-xl border border-[#1E3A5F] bg-[#112240] p-1.5 shadow-sm" role="tablist" aria-label="Sections du tableau de bord">
+        <div class="grid grid-cols-2 sm:grid-cols-5 lg:inline-flex items-center gap-1.5 rounded-xl border border-[#1E3A5F] bg-[#112240] p-1.5 shadow-sm" role="tablist" aria-label="Sections du tableau de bord">
           @for (t of tabs; track t.id) {
             <button
               type="button" role="tab" [attr.aria-selected]="ui.dashboardTab() === t.id" (click)="ui.dashboardTab.set(t.id)"
@@ -67,7 +67,13 @@ type Tab = 'live' | 'telemetry' | 'map' | 'activity';
         @case ('live') {
           <div class="grid gap-4 lg:grid-cols-12">
             <div class="flex flex-col gap-4 lg:col-span-7"><app-live-camera /><app-battery-panel /></div>
-            <div class="lg:col-span-5"><app-motors-panel /></div>
+            <div class="lg:col-span-5"><app-pilotage-panel /></div>
+          </div>
+        }
+        @case ('pilotage') {
+          <div class="grid gap-4 lg:grid-cols-12">
+            <div class="lg:col-span-5"><app-pilotage-panel /></div>
+            <div class="flex flex-col gap-4 lg:col-span-7"><app-live-camera /><app-flight-data /></div>
           </div>
         }
         @case ('telemetry') {
@@ -100,6 +106,7 @@ export class DashboardComponent {
 
   protected readonly tabs: { id: Tab; label: string; icon: IconName }[] = [
     { id: 'live', label: 'Direct & Caméra', icon: 'video' },
+    { id: 'pilotage', label: 'Pilotage & Vol', icon: 'gamepad' },
     { id: 'telemetry', label: 'Télémétrie complète', icon: 'activity' },
     { id: 'map', label: 'Carte & Périmètres', icon: 'map' },
     { id: 'activity', label: 'Missions & Alertes', icon: 'missions' },
