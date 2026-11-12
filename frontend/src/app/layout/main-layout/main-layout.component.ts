@@ -46,7 +46,7 @@ import { NAV_ITEMS } from '../nav-items';
             </a>
 
             <!-- Navigation Principale Verticale -->
-            <nav class="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-250px)] pr-1 custom-scrollbar" aria-label="Navigation principale">
+            <nav class="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-210px)] pr-1 custom-scrollbar" aria-label="Navigation principale">
               @for (item of items; track item.path) {
                 <a
                   [routerLink]="item.path"
@@ -63,30 +63,49 @@ import { NAV_ITEMS } from '../nav-items';
                     </span>
                   }
                 </a>
+
+                @if (item.path === '/cameras') {
+                  <!-- Widget Statut Capteurs & Alertes (comme sur la maquette de référence) -->
+                  <div class="my-1.5 rounded-xl border border-[#1E3A5F]/70 bg-[#0B1A30] p-2.5 shadow-inner">
+                    <div class="flex items-center justify-between text-[11px] font-bold">
+                      <span class="flex items-center gap-1.5 text-[#38BDF8]">
+                        <app-icon name="gauge" [size]="13" />
+                        <span>Capteurs session</span>
+                      </span>
+                      <span class="text-[#34D399]">77%</span>
+                    </div>
+                    <div class="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[#1E293B]">
+                      <div class="h-full bg-gradient-to-r from-[#38BDF8] to-[#10B981]" style="width: 77%;"></div>
+                    </div>
+                    <div class="mt-1.5 flex items-center gap-1.5 text-[10px] text-[#94A3B8]">
+                      <span class="size-1.5 rounded-full bg-[#EF4444] animate-pulse"></span>
+                      <span>{{ alerts.unresolvedCount() > 0 ? alerts.unresolvedCount() + ' alertes actives' : '2 interventions' }}</span>
+                    </div>
+                  </div>
+                }
               }
             </nav>
           </div>
 
           <!-- Bas de la barre latérale : Compte, Déconnexion & Logo UVCI -->
-          <div class="flex flex-col gap-2 border-t border-[#1E3A5F]/60 pt-3">
-            <button
-              type="button"
-              (click)="ui.toggleFloatingCamera()"
-              class="flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-[#94A3B8] transition hover:bg-[#112240] hover:text-[#38BDF8]">
-              <app-icon name="video" [size]="14" />
-              <span>Caméra Flottante</span>
-            </button>
+          <div class="flex flex-col gap-1.5 border-t border-[#1E3A5F]/60 pt-2.5">
+            <a
+              routerLink="/settings"
+              class="flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-[#94A3B8] transition hover:bg-[#112240] hover:text-[#F8FAFC]">
+              <app-icon name="user" [size]="14" />
+              <span class="truncate">Compte</span>
+            </a>
 
             <button
               type="button"
               (click)="auth.logout()"
               class="flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-[#F87171] transition hover:bg-[#EF4444]/15">
-              <app-icon name="x" [size]="14" />
+              <app-icon name="logout" [size]="14" />
               <span>Déconnexion</span>
             </button>
 
             <!-- Emblème UVCI -->
-            <div class="mt-2 flex flex-col items-center justify-center gap-1 border-t border-[#1E3A5F]/40 pt-2 text-center text-[#94A3B8]">
+            <div class="mt-1.5 flex flex-col items-center justify-center gap-1 border-t border-[#1E3A5F]/40 pt-2 text-center text-[#94A3B8]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-6 text-[#38BDF8]">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />

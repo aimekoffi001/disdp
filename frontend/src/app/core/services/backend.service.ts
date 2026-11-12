@@ -455,6 +455,166 @@ export class BackendService {
   }
 
   // ==========================================
+  // CAPTEURS (100% MySQL)
+  // ==========================================
+
+  async getSensors(): Promise<any[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/capteurs`, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async createSensor(payload: any): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/capteurs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: this.extractErrorMessage(data, 'Erreur lors de l\'ajout du capteur.') };
+      return { ok: true, data: data.capteur };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  async deleteSensor(id: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/capteurs/${id}`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, error: data.error };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  // ==========================================
+  // DÉTECTIONS DE PANNES & OBSTACLES (100% MySQL)
+  // ==========================================
+
+  async getDetections(): Promise<any[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/detections`, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async createDetection(payload: any): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/detections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: this.extractErrorMessage(data, 'Erreur lors de la création de la détection.') };
+      return { ok: true, data: data.detection };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  async deleteDetection(id: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/detections/${id}`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, error: data.error };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  // ==========================================
+  // INSPECTIONS TECHNIQUES (100% MySQL)
+  // ==========================================
+
+  async getInspections(): Promise<any[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/inspections`, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async createInspection(payload: any): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/inspections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: this.extractErrorMessage(data, 'Erreur lors de l\'enregistrement de l\'inspection.') };
+      return { ok: true, data: data.inspection };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  async deleteInspection(id: string): Promise<OpResult> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/inspections/${id}`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, error: data.error };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  // ==========================================
+  // HISTORIQUES & TRAÇABILITÉ (100% MySQL)
+  // ==========================================
+
+  async getHistory(): Promise<any[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/historiques`, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async recordHistory(action: string, description: string, droneId?: string, missionId?: string): Promise<void> {
+    try {
+      await fetch(`${this.baseUrl}/api/historiques`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          action,
+          description,
+          drone_id: droneId ? Number(droneId) : null,
+          mission_id: missionId ? Number(missionId) : null,
+          date_action: new Date().toISOString(),
+        }),
+      });
+    } catch {}
+  }
+
+  // ==========================================
   // COMMANDES OPÉRATIONNELLES DRONES
   // ==========================================
 

@@ -45,6 +45,9 @@ class InspectionController extends Controller
         if (empty($validated['date_inspection'])) {
             $validated['date_inspection'] = now();
         }
+        if (empty($validated['utilisateur_id'])) {
+            $validated['utilisateur_id'] = auth()->id() ?? \App\Models\Utilisateur::first()?->id ?? 1;
+        }
 
         $inspection = Inspection::create($validated);
 

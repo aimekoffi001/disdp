@@ -44,6 +44,18 @@ class DetectionController extends Controller
         if (empty($validated['statut'])) {
             $validated['statut'] = 'a_traiter';
         }
+        if (empty($validated['mission_id'])) {
+            $validated['mission_id'] = \App\Models\Mission::first()?->id ?? 1;
+        }
+        if (empty($validated['drone_id'])) {
+            $validated['drone_id'] = \App\Models\Drone::first()?->id ?? 1;
+        }
+        if (empty($validated['latitude'])) {
+            $validated['latitude'] = 5.3594;
+        }
+        if (empty($validated['longitude'])) {
+            $validated['longitude'] = -4.0083;
+        }
 
         $detection = Detection::create($validated);
 
