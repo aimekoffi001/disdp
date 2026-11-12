@@ -274,3 +274,4 @@ export class PilotagePanelComponent {
     this.backend.recordHistory('rth_retour_base', `Ordre RTH (Return to Home) déclenché pour ${d.name}`, d.id);
   }
 }
+

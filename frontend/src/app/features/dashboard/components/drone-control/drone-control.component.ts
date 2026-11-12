@@ -22,7 +22,15 @@ import { DRONE_STATUS, FLIGHT_MODE, fmtDistance } from '../../../../shared/utils
             <span [class]="'absolute -top-0.5 -right-0.5 size-2 rounded-full ring-2 ring-[#0C1E3D] ' + dot(d.status)"></span>
           </span>
           <div class="leading-tight">
-            <div class="text-xs font-bold text-[#F8FAFC]">{{ d.name }}</div>
+            <!-- Sélecteur rapide de drone connecté -->
+            <select
+              class="rounded-lg border border-[#1E3A5F] bg-[#0C1E3D] px-2 py-0.5 text-xs font-bold text-[#F8FAFC] transition hover:border-[#38BDF8] focus:border-[#38BDF8] focus:outline-none cursor-pointer"
+              [value]="d.id"
+              (change)="selectDrone($any($event.target).value)">
+              @for (item of allDrones(); track item.id) {
+                <option [value]="item.id">{{ item.name }} ({{ item.code }})</option>
+              }
+            </select>
             <div class="flex items-center gap-1.5 mt-0.5">
               <app-status-badge [tone]="meta[d.status].tone">{{ meta[d.status].label }}</app-status-badge>
               <!-- Pourcentages batterie en vert doux sur fond bleu marine -->
@@ -118,6 +126,14 @@ import { DRONE_STATUS, FLIGHT_MODE, fmtDistance } from '../../../../shared/utils
           }
         </div>
       </div>
+    } @else {
+      <div class="flex items-center gap-2.5 rounded-xl border border-[#38BDF8]/40 bg-[#112240] px-3.5 py-2 text-xs">
+        <app-icon name="radio" [size]="16" class="text-[#38BDF8] animate-pulse" />
+        <span class="font-bold text-[#F8FAFC]">Synchronisation serveur...</span>
+        <button type="button" (click)="reloadDrones()" class="ml-2 rounded-lg bg-[#2563EB] px-2.5 py-1 text-xs font-bold text-white hover:bg-[#1D4ED8] cursor-pointer">
+          Recharger
+        </button>
+      </div>
     }
   `,
 })
@@ -126,12 +142,21 @@ export class DroneControlComponent {
   private readonly control = inject(FlightControlService);
   private readonly ui = inject(UiService);
   protected readonly drone = this.drones.selected;
+  protected readonly allDrones = this.drones.drones;
   protected readonly meta = DRONE_STATUS;
   protected readonly round = Math.round;
   protected readonly Math = Math;
   protected readonly fmtDist = fmtDistance;
   protected readonly takeoffSpeed = signal<number>(12);
   protected readonly modes = (Object.keys(FLIGHT_MODE) as FlightMode[]).map((value) => ({ value, label: FLIGHT_MODE[value].label }));
+
+  protected selectDrone(id: string): void {
+    this.drones.select(id);
+  }
+
+  protected reloadDrones(): void {
+    this.drones.loadFromBackend();
+  }
 
   protected dot(s: keyof typeof DRONE_STATUS): string {
     return {
