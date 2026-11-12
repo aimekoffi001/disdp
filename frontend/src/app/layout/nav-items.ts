@@ -5,6 +5,7 @@ export interface NavItem { label: string; path: string; icon: IconName; badge?: 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Tableau de bord', path: '/dashboard', icon: 'dashboard' },
   { label: 'Drones', path: '/drones', icon: 'drone' },
+  { label: 'Pilotage', path: '/pilotage', icon: 'gamepad' },
   { label: 'Missions', path: '/missions', icon: 'missions' },
   { label: 'Zones', path: '/surveillance-zones', icon: 'shield' },
   { label: 'Planification', path: '/flight-planning', icon: 'schedule' },

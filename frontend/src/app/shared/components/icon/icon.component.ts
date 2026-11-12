@@ -2,22 +2,25 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import {
   LucideActivity, LucideAlertTriangle, LucideBatteryFull, LucideBell, LucideCalendarClock, LucideCalendarDays,
   LucideCamera, LucideCheck, LucideChevronDown, LucideClipboardCheck, LucideClock, LucideCog, LucideCompass,
-  LucideDrone, LucideDroplets, LucideDynamicIcon, LucideEye, LucideFileText, LucideGauge, LucideHistory,
-  LucideLayoutDashboard, LucideMap, LucideMapPin, LucideMaximize, LucideMenu, LucideMountain, LucidePause,
-  LucidePencil, LucidePlay, LucidePlus, LucideRadio, LucideRoute, LucideSearch, LucideSettings, LucideShieldCheck,
-  LucideThermometer, LucideTrash2, LucideUser, LucideVideo, LucideWind, LucideX, LucideZap,
+  LucideCrosshair, LucideDrone, LucideDroplets, LucideDynamicIcon, LucideEye, LucideFileText, LucideGamepad2,
+  LucideGauge, LucideHistory, LucideLayoutDashboard, LucideMap, LucideMapPin, LucideMaximize, LucideMenu,
+  LucideMountain, LucidePause, LucidePencil, LucidePlaneLanding, LucidePlaneTakeoff, LucidePlay, LucidePlus,
+  LucideRadio, LucideRocket, LucideRotateCw, LucideRoute, LucideSearch, LucideSettings, LucideShieldCheck,
+  LucideThermometer, LucideTrash2, LucideUser, LucideVideo, LucideWind, LucideWrench, LucideX, LucideZap,
 } from '@lucide/angular';
 
 const ICONS = {
   activity: LucideActivity, alert: LucideAlertTriangle, battery: LucideBatteryFull, bell: LucideBell,
   schedule: LucideCalendarClock, calendar: LucideCalendarDays, camera: LucideCamera, check: LucideCheck,
   chevron: LucideChevronDown, missions: LucideClipboardCheck, clock: LucideClock, cog: LucideCog,
-  compass: LucideCompass, drone: LucideDrone, droplets: LucideDroplets, eye: LucideEye, file: LucideFileText,
-  gauge: LucideGauge, history: LucideHistory, dashboard: LucideLayoutDashboard, map: LucideMap, pin: LucideMapPin,
+  compass: LucideCompass, crosshair: LucideCrosshair, drone: LucideDrone, droplets: LucideDroplets,
+  eye: LucideEye, file: LucideFileText, gamepad: LucideGamepad2, gauge: LucideGauge, history: LucideHistory,
+  dashboard: LucideLayoutDashboard, map: LucideMap, pin: LucideMapPin, landing: LucidePlaneLanding,
   maximize: LucideMaximize, menu: LucideMenu, mountain: LucideMountain, pause: LucidePause, pencil: LucidePencil,
-  play: LucidePlay, plus: LucidePlus, radio: LucideRadio, route: LucideRoute, search: LucideSearch,
-  settings: LucideSettings, shield: LucideShieldCheck, thermometer: LucideThermometer, trash: LucideTrash2,
-  user: LucideUser, video: LucideVideo, wind: LucideWind, x: LucideX, zap: LucideZap,
+  play: LucidePlay, plus: LucidePlus, radio: LucideRadio, rocket: LucideRocket, rotate: LucideRotateCw,
+  route: LucideRoute, search: LucideSearch, settings: LucideSettings, shield: LucideShieldCheck,
+  takeoff: LucidePlaneTakeoff, thermometer: LucideThermometer, trash: LucideTrash2, user: LucideUser,
+  video: LucideVideo, wind: LucideWind, wrench: LucideWrench, x: LucideX, zap: LucideZap,
 } as const;
 
 export type IconName = keyof typeof ICONS;
