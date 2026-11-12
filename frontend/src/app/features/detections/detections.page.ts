@@ -262,3 +262,4 @@ export class DetectionsPage {
     }
   }
 }
+

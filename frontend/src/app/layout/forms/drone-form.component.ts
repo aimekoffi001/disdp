@@ -12,7 +12,7 @@ import { DRONE_STATUS } from '../../shared/utils/labels';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (ui.droneForm(); as ctx) {
-      <app-modal [title]="ctx.drone ? 'Modifier le drone' : 'Ajouter un drone'" (closed)="close()">
+      <app-modal [title]="ctx.drone ? 'Modifier le drone' : 'Connecter un nouveau drone'" (closed)="close()">
         <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-3" novalidate>
           <div>
             <label class="field-label" for="df-name">Nom du drone</label>
@@ -48,7 +48,7 @@ import { DRONE_STATUS } from '../../shared/utils/labels';
               @if (submitting()) {
                 <span>Enregistrement en cours...</span>
               } @else {
-                <span>{{ ctx.drone ? 'Enregistrer les modifications' : 'Ajouter le drone' }}</span>
+                <span>{{ ctx.drone ? 'Enregistrer les modifications' : 'Connecter et enregistrer' }}</span>
               }
             </button>
           </div>
